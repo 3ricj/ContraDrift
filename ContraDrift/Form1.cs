@@ -86,14 +86,24 @@ namespace ContraDrift
 
             textBox1.Text = settings.TelescopeProgId;
             textBox2.Text = settings.WatchFolder;
+
+            PID_Setting_Kp_RA_filter.Text = settings.PID_Setting_Kp_RA_filter.ToString();
+            PID_Setting_Ki_RA_filter.Text = settings.PID_Setting_Ki_RA_filter.ToString();
+            PID_Setting_Kd_RA_filter.Text = settings.PID_Setting_Kd_RA_filter.ToString();
+            PID_Setting_Nfilt_RA.Text = settings.PID_Setting_Nfilt_RA.ToString();
+            PID_Setting_Kp_DEC_filter.Text = settings.PID_Setting_Kp_DEC_filter.ToString();
+            PID_Setting_Ki_DEC_filter.Text = settings.PID_Setting_Ki_DEC_filter.ToString();
+            PID_Setting_Kd_DEC_filter.Text = settings.PID_Setting_Kd_DEC_filter.ToString();
+            PID_Setting_Nfilt_DEC.Text = settings.PID_Setting_Nfilt_DEC.ToString();
+
             PID_Setting_Kp_RA.Text = settings.PID_Setting_Kp_RA.ToString();
             PID_Setting_Ki_RA.Text = settings.PID_Setting_Ki_RA.ToString();
             PID_Setting_Kd_RA.Text = settings.PID_Setting_Kd_RA.ToString();
-            PID_Setting_Nfilt_RA.Text = settings.PID_Setting_Nfilt_RA.ToString();
             PID_Setting_Kp_DEC.Text = settings.PID_Setting_Kp_DEC.ToString();
             PID_Setting_Ki_DEC.Text = settings.PID_Setting_Ki_DEC.ToString();
             PID_Setting_Kd_DEC.Text = settings.PID_Setting_Kd_DEC.ToString();
-            PID_Setting_Nfilt_DEC.Text = settings.PID_Setting_Nfilt_DEC.ToString();
+
+            if (settings.ProcessingTraditional) { ProcessingTraditional.Checked = true; } else { ProcessingFilter.Checked = true; }
 
 
             settings.Status = "Stopped";
@@ -129,6 +139,32 @@ namespace ContraDrift
 
 
         }
+        private void save_settings()
+        {
+            try
+            {
+                settings.PID_Setting_Kp_RA_filter = float.Parse(PID_Setting_Kp_RA_filter.Text);
+                settings.PID_Setting_Ki_RA_filter = float.Parse(PID_Setting_Ki_RA_filter.Text);
+                settings.PID_Setting_Kd_RA_filter = float.Parse(PID_Setting_Kd_RA_filter.Text);
+                settings.PID_Setting_Nfilt_RA = float.Parse(PID_Setting_Nfilt_RA.Text);
+                settings.PID_Setting_Kp_DEC_filter = float.Parse(PID_Setting_Kp_DEC_filter.Text);
+                settings.PID_Setting_Ki_DEC_filter = float.Parse(PID_Setting_Ki_DEC_filter.Text);
+                settings.PID_Setting_Kd_DEC_filter = float.Parse(PID_Setting_Kd_DEC_filter.Text);
+                settings.PID_Setting_Nfilt_DEC = float.Parse(PID_Setting_Nfilt_DEC.Text);
+                settings.PID_Setting_Kp_RA = float.Parse(PID_Setting_Kp_RA.Text);
+                settings.PID_Setting_Ki_RA = float.Parse(PID_Setting_Ki_RA.Text);
+                settings.PID_Setting_Kd_RA = float.Parse(PID_Setting_Kd_RA.Text);
+                settings.PID_Setting_Kp_DEC = float.Parse(PID_Setting_Kp_DEC.Text);
+                settings.PID_Setting_Ki_DEC = float.Parse(PID_Setting_Ki_DEC.Text);
+                settings.PID_Setting_Kd_DEC = float.Parse(PID_Setting_Kd_DEC.Text);
+                settings.Save();
+            }
+            catch { log.Debug("Problems with save settings"); } // some garbage input we just toss if we can't parse it. 
+
+            if (ProcessingTraditional.Checked) { settings.ProcessingTraditional = true; } else { settings.ProcessingTraditional = false; }
+            log.Debug("Settings saved..");
+        }
+
 
         private void button3_Click(object sender, EventArgs e)
         {
@@ -161,12 +197,11 @@ namespace ContraDrift
                 telescope = new Telescope(settings.TelescopeProgId);
                 telescope.Connected = true;
                 telescope.Tracking = true;
+                telescope.SlewToCoordinatesAsync(20.7333995798772, 45.3667092514744); //a blocking call for testing; 
+                
 
-                double alt, az;
+                save_settings();
 
-                alt = telescope.Altitude;
-                az = telescope.Azimuth;
-                log.Debug("alt = " + alt + "\t az = " + az);
 
                 worker.DoWork += new DoWorkEventHandler(worker_backgroundProcess);
                 worker.RunWorkerAsync();
@@ -186,7 +221,7 @@ namespace ContraDrift
 
                 watcher.Filter = "*.fits";
                 watcher.EnableRaisingEvents = true;
-                log.Debug("Watcher Enabled");
+                log.Debug("Watcher Enabled: " + watcher.Path);
             }
         }
 
@@ -235,49 +270,50 @@ namespace ContraDrift
                 try
                 {
                     p.Solve();
-                    log.Debug(p.RightAscension + ",");
-                    log.Debug(p.Declination + ",");
                     PlateRa = p.RightAscension;
                     PlateDec = p.Declination;
                     PlateLocaltime = p.ExposureStartTime;
                     PlateExposureTime = p.ExposureInterval;
-                    log.Info("Platesolve: {@InputFilename},{@RightAscension},{@PlateDec},{@PlateLocaltime},{@PlateExposureTime},{@AirMass},{@SolveTime},", InputFilename, PlateRa, PlateDec, PlateLocaltime, p.Airmass, stopwatch.ElapsedMilliseconds / 1000);
-                    
+                    //log.Info("Platesolve: {@InputFilename},{@RightAscension},{@PlateDec},{@PlateLocaltime},{@PlateExposureTime},{@AirMass},{@SolveTime},", InputFilename, PlateRa, PlateDec, PlateLocaltime, p.Airmass, stopwatch.ElapsedMilliseconds / 1000);
+                    log.Info("Platesolve: Filename: " + InputFilename + " PlateRa: " + PlateRa + " PlateDec: " + PlateDec + " PlateLocaltime: " + PlateLocaltime + " Airmass: " + p.Airmass + " Solvetime: " + (float) stopwatch.ElapsedMilliseconds / 1000);
+
                 }
                 catch (Exception ex) { log.Debug(ex); }
 
+                bool Solved = p.Solved;
+                DateTime ExposureStartTime = p.ExposureStartTime;
+                double ExposureInterval = p.ExposureInterval;
 
-                stopwatch.Stop();
-                log.Debug((float)stopwatch.ElapsedMilliseconds / 1000);
                 p.DetachFITS();
                 _ = Marshal.ReleaseComObject(p); // important or the com object leaks memory
+                
 
-                telescope.SlewToCoordinates(20.7333995798772, 45.3667092514744); //a blocking call for testing; 
+                stopwatch.Stop();
+
 
                 ScopeRa = telescope.RightAscension;
                 ScopeDec = telescope.Declination;
                 ScopeRaRate = telescope.RightAscensionRate / 15; //  arcsec to RA Sec per sidereal second divide by 15.  
                 ScopeDecRate = telescope.DeclinationRate;
 
-                log.Debug("ScopeRa: " + ScopeRa);
-                log.Debug("ScopeDec: " + ScopeDec);
-                log.Debug("ScopeRaRate: " + ScopeRaRate);
-                log.Debug("ScopeDecRate: " + ScopeDecRate);
+                log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec+ ",ScopeRaRate: " + ScopeRaRate+ ",ScopeDecRate: " + ScopeDecRate);
 
 
                 if (FirstImage)
                 {
-                    if (p.Solved)
+                    if (Solved)
                     {
                         FirstImage = false;
                         PlateRaReference = PlateRa;
                         PlateDecReference = PlateDec;
-                        LastExposureTime = p.ExposureStartTime.AddSeconds(p.ExposureInterval / 2);
+                        LastExposureTime = ExposureStartTime.AddSeconds(ExposureInterval / 2);
+                        log.Debug("FirstImage:  PlateRa: " + PlateRa + ",PlateDec: " + PlateDec + ",ExposureStartTime: " + ExposureStartTime + ",ExposureInterval: " + ExposureInterval);
+
                     }
                 }
                 else
                 {
-                    dt_sec = ((p.ExposureStartTime.AddSeconds(p.ExposureInterval / 2) - LastExposureTime).TotalMilliseconds)*1000;
+                    dt_sec = ((ExposureStartTime.AddSeconds(ExposureInterval / 2) - LastExposureTime).TotalMilliseconds)*1000;
 
                     // PID control for RA
                     PID_error_RA = ScopeRa - PlateRa;
@@ -286,20 +322,17 @@ namespace ContraDrift
                     PID_derivative_RA = (PID_error_RA - PID_previous_error_RA) / (dt_sec);
                     new_RA_rate = settings.PID_Setting_Kp_RA * PID_propotional_RA + settings.PID_Setting_Ki_RA * PID_integral_RA + settings.PID_Setting_Kd_RA * PID_derivative_RA;
 
-                    log.Debug("PID_propotional_RA: " + PID_propotional_RA);
-                    log.Debug("PID_integral_RA: " + PID_integral_RA);
-                    log.Debug("PID_derivative_RA: " + PID_derivative_RA);
-                    log.Debug("new_RA_rate: " + new_RA_rate);
+
 
 
                     // PID control for RA with IIF filtered derivative - set up dt dependent constants
-                    A0_RA = settings.PID_Setting_Kp_RA + settings.PID_Setting_Ki_RA * dt_sec + settings.PID_Setting_Kd_RA / dt_sec;
-                    A1_RA = -settings.PID_Setting_Kp_RA;
-                    A0d_RA = settings.PID_Setting_Kd_RA / dt_sec;
-                    A1d_RA = -2.0 * settings.PID_Setting_Kd_RA / dt_sec;
-                    A2d_RA = settings.PID_Setting_Kd_RA / dt_sec;
+                    A0_RA = settings.PID_Setting_Kp_RA_filter + settings.PID_Setting_Ki_RA_filter * dt_sec + settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    A1_RA = -settings.PID_Setting_Kp_RA_filter;
+                    A0d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    A1d_RA = -2.0 * settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    A2d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
                     Nfilt_RA = settings.PID_Setting_Nfilt_RA;
-                    tau_RA = settings.PID_Setting_Kd_RA / (settings.PID_Setting_Kp_RA * Nfilt_RA);
+                    tau_RA = settings.PID_Setting_Kd_RA_filter / (settings.PID_Setting_Kp_RA_filter * Nfilt_RA);
                     alpha_RA = dt_sec / (2.0 * tau_RA);
 
                     // Perform RA PID with IIF filtered derivative
@@ -311,6 +344,11 @@ namespace ContraDrift
                     fder0_RA = (alpha_RA / (alpha_RA + 1)) * (PID_der0_RA + PID_der1_RA) - ((alpha_RA - 1) / (alpha_RA + 1)) * PID_der1_RA;
                     new_RA_rate_filtder = A0_RA * PID_error_new_RA + A1_RA * PID_error_last_RA + fder0_RA;
 
+                    log.Debug("PID_RA:  PID_propotional_RA: " + PID_propotional_RA + ",PID_integral_RA: " + PID_integral_RA + ",PID_derivative_RA: " + PID_derivative_RA + ",new_RA_rate: " + new_RA_rate);
+                    log.Debug("PID_RA_settings:  PID_Setting_Kp_RA: " + settings.PID_Setting_Kp_RA + ",PID_Setting_Ki_RA: " + settings.PID_Setting_Ki_RA + ",PID_Setting_Kd_RA: " + settings.PID_Setting_Kd_RA);
+                    log.Debug("PID_RA_filter settings:  PID_Setting_Kp_RA_filter: " + settings.PID_Setting_Kp_RA_filter + ",PID_Setting_Ki_RA_filter: " + settings.PID_Setting_Ki_RA_filter + ",PID_Setting_Kd_RA_filter: " + settings.PID_Setting_Kd_RA_filter + ",PID_Setting_Nfilt_RA: " + settings.PID_Setting_Nfilt_RA);
+                    log.Debug("PID_RA_Filter:  fder0_RA: " + fder0_RA);
+
 
 
                     // standard PID control for DEC
@@ -321,19 +359,15 @@ namespace ContraDrift
                     new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
 
 
-                    log.Debug("PID_propotional_DEC: " + PID_propotional_DEC);
-                    log.Debug("PID_integral_DEC: " + PID_integral_DEC);
-                    log.Debug("PID_derivative_DEC: " + PID_derivative_DEC);
-                    log.Debug("new_DEC_rate: " + new_DEC_rate);
 
                     // PID control for DEC with IIF filtered derivative - set up dt dependent constants
-                    A0_DEC = settings.PID_Setting_Kp_DEC + settings.PID_Setting_Ki_DEC * dt_sec + settings.PID_Setting_Kd_DEC / dt_sec;
-                    A1_DEC = -settings.PID_Setting_Kp_DEC;
-                    A0d_DEC = settings.PID_Setting_Kd_DEC / dt_sec;
-                    A1d_DEC = -2.0 * settings.PID_Setting_Kd_DEC / dt_sec;
-                    A2d_DEC = settings.PID_Setting_Kd_DEC / dt_sec;
+                    A0_DEC = settings.PID_Setting_Kp_DEC_filter + settings.PID_Setting_Ki_DEC_filter * dt_sec + settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    A1_DEC = -settings.PID_Setting_Kp_DEC_filter;
+                    A0d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    A1d_DEC = -2.0 * settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    A2d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
                     Nfilt_DEC = settings.PID_Setting_Nfilt_DEC;
-                    tau_DEC = settings.PID_Setting_Kd_DEC / (settings.PID_Setting_Kp_DEC * Nfilt_DEC);
+                    tau_DEC = settings.PID_Setting_Kd_DEC_filter / (settings.PID_Setting_Kp_DEC_filter * Nfilt_DEC);
                     alpha_DEC = dt_sec / (2.0 * tau_DEC);
 
                     // Perform DEC PID with IIF filtered derivative
@@ -345,12 +379,33 @@ namespace ContraDrift
                     fder0_DEC = (alpha_DEC / (alpha_DEC + 1)) * (PID_der0_DEC + PID_der1_DEC) - ((alpha_DEC - 1) / (alpha_DEC + 1)) * PID_der1_DEC;
                     new_DEC_rate_filtder = A0_DEC * PID_error_new_DEC + A1_DEC * PID_error_last_DEC + fder0_DEC;
 
+                    log.Debug("PID_DEC:  PID_propotional_DEC: " + PID_propotional_DEC + ",PID_integral_DEC: " + PID_integral_DEC + ",PID_derivative_DEC: " + PID_derivative_DEC + ",new_DEC_rate: " + new_DEC_rate);
+                    log.Debug("PID_DEC_settings:  PID_Setting_Kp_DEC: " + settings.PID_Setting_Kp_DEC + ",PID_Setting_Ki_DEC: " + settings.PID_Setting_Ki_DEC + ",PID_Setting_Kd_DEC: " + settings.PID_Setting_Kd_DEC);
+                    log.Debug("PID_DEC_filter settings:  PID_Setting_Kp_DEC_filter: " + settings.PID_Setting_Kp_DEC_filter + ",PID_Setting_Ki_DEC_filter: " + settings.PID_Setting_Ki_DEC_filter + ",PID_Setting_Kd_DEC_filter: " + settings.PID_Setting_Kd_DEC_filter + ",PID_Setting_Nfilt_DEC: " + settings.PID_Setting_Nfilt_DEC);
+                    log.Debug("PID_DEC_Filter:  fder0_DEC: " + fder0_DEC);
+
+                }
+
+                if (ProcessingFilter.Checked)
+                {
+                    new_DEC_rate = new_DEC_rate_filtder;
+                    new_RA_rate = new_RA_rate_filtder;
+                    log.Debug("Processing Filter mode enabled, override new_RA_rate to: " + new_RA_rate + ",new_DEC_rate: " + new_DEC_rate);
+
                 }
 
                 // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
-
-                telescope.RightAscensionRate = new_RA_rate;
-                telescope.DeclinationRate = new_DEC_rate;
+                if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate)
+                {
+                    telescope.RightAscensionRate = new_RA_rate;
+                    telescope.DeclinationRate = new_DEC_rate;
+                    log.Debug("Setting RightAscensionRate: " + new_RA_rate);
+                    log.Debug("Setting DeclinationRate: " + new_DEC_rate);
+                }
+                else
+                {
+                    log.Error("Telescope is not tracking!!! not setting tracking rates!!!"); 
+                }
 
 
 
@@ -366,7 +421,12 @@ namespace ContraDrift
                   }
             });
 
-    } 
+    }
+
+        private void SaveButton_Click(object sender, EventArgs e)
+        {
+            save_settings();
+        }
     }
         
 }

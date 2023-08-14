@@ -12,7 +12,7 @@ namespace ContraDrift.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.4.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.8.1.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -152,6 +152,90 @@ namespace ContraDrift.Properties {
             }
             set {
                 this["PID_Setting_Nfilt_DEC"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double PID_Setting_Kp_RA_filter {
+            get {
+                return ((double)(this["PID_Setting_Kp_RA_filter"]));
+            }
+            set {
+                this["PID_Setting_Kp_RA_filter"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double PID_Setting_Ki_RA_filter {
+            get {
+                return ((double)(this["PID_Setting_Ki_RA_filter"]));
+            }
+            set {
+                this["PID_Setting_Ki_RA_filter"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double PID_Setting_Kd_RA_filter {
+            get {
+                return ((double)(this["PID_Setting_Kd_RA_filter"]));
+            }
+            set {
+                this["PID_Setting_Kd_RA_filter"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double PID_Setting_Kp_DEC_filter {
+            get {
+                return ((double)(this["PID_Setting_Kp_DEC_filter"]));
+            }
+            set {
+                this["PID_Setting_Kp_DEC_filter"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double PID_Setting_Ki_DEC_filter {
+            get {
+                return ((double)(this["PID_Setting_Ki_DEC_filter"]));
+            }
+            set {
+                this["PID_Setting_Ki_DEC_filter"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double PID_Setting_Kd_DEC_filter {
+            get {
+                return ((double)(this["PID_Setting_Kd_DEC_filter"]));
+            }
+            set {
+                this["PID_Setting_Kd_DEC_filter"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ProcessingTraditional {
+            get {
+                return ((bool)(this["ProcessingTraditional"]));
+            }
+            set {
+                this["ProcessingTraditional"] = value;
             }
         }
     }

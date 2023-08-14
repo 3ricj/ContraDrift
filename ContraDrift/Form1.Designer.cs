@@ -38,27 +38,42 @@ namespace ContraDrift
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.button3 = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
-            this.label7 = new System.Windows.Forms.Label();
-            this.RA = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
-            this.PID_Setting_Kd_DEC = new System.Windows.Forms.TextBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.PID_Setting_Ki_DEC = new System.Windows.Forms.TextBox();
-            this.label6 = new System.Windows.Forms.Label();
-            this.PID_Setting_Kp_DEC = new System.Windows.Forms.TextBox();
-            this.label3 = new System.Windows.Forms.Label();
-            this.PID_Setting_Kd_RA = new System.Windows.Forms.TextBox();
-            this.label2 = new System.Windows.Forms.Label();
-            this.PID_Setting_Ki_RA = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.PID_Setting_Kp_RA = new System.Windows.Forms.TextBox();
-            this.radioButton1 = new System.Windows.Forms.RadioButton();
-            this.radioButton2 = new System.Windows.Forms.RadioButton();
+            this.label10 = new System.Windows.Forms.Label();
             this.label8 = new System.Windows.Forms.Label();
             this.PID_Setting_Nfilt_DEC = new System.Windows.Forms.TextBox();
             this.label9 = new System.Windows.Forms.Label();
             this.PID_Setting_Nfilt_RA = new System.Windows.Forms.TextBox();
-            this.label10 = new System.Windows.Forms.Label();
+            this.ProcessingFilter = new System.Windows.Forms.RadioButton();
+            this.ProcessingTraditional = new System.Windows.Forms.RadioButton();
+            this.label7 = new System.Windows.Forms.Label();
+            this.RA = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.PID_Setting_Kd_DEC_filter = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
+            this.PID_Setting_Ki_DEC_filter = new System.Windows.Forms.TextBox();
+            this.label6 = new System.Windows.Forms.Label();
+            this.PID_Setting_Kp_DEC_filter = new System.Windows.Forms.TextBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.PID_Setting_Kd_RA_filter = new System.Windows.Forms.TextBox();
+            this.label2 = new System.Windows.Forms.Label();
+            this.PID_Setting_Ki_RA_filter = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.PID_Setting_Kp_RA_filter = new System.Windows.Forms.TextBox();
+            this.label13 = new System.Windows.Forms.Label();
+            this.label14 = new System.Windows.Forms.Label();
+            this.label15 = new System.Windows.Forms.Label();
+            this.PID_Setting_Kd_DEC = new System.Windows.Forms.TextBox();
+            this.label16 = new System.Windows.Forms.Label();
+            this.PID_Setting_Ki_DEC = new System.Windows.Forms.TextBox();
+            this.label17 = new System.Windows.Forms.Label();
+            this.PID_Setting_Kp_DEC = new System.Windows.Forms.TextBox();
+            this.label18 = new System.Windows.Forms.Label();
+            this.PID_Setting_Kd_RA = new System.Windows.Forms.TextBox();
+            this.label19 = new System.Windows.Forms.Label();
+            this.PID_Setting_Ki_RA = new System.Windows.Forms.TextBox();
+            this.label20 = new System.Windows.Forms.Label();
+            this.PID_Setting_Kp_RA = new System.Windows.Forms.TextBox();
+            this.SaveButton = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -123,7 +138,7 @@ namespace ContraDrift
             // 
             // button3
             // 
-            this.button3.Location = new System.Drawing.Point(53, 456);
+            this.button3.Location = new System.Drawing.Point(53, 552);
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(92, 29);
             this.button3.TabIndex = 5;
@@ -133,169 +148,57 @@ namespace ContraDrift
             // 
             // groupBox3
             // 
+            this.groupBox3.Controls.Add(this.SaveButton);
+            this.groupBox3.Controls.Add(this.label13);
+            this.groupBox3.Controls.Add(this.label14);
+            this.groupBox3.Controls.Add(this.label15);
+            this.groupBox3.Controls.Add(this.PID_Setting_Kd_DEC);
+            this.groupBox3.Controls.Add(this.label16);
+            this.groupBox3.Controls.Add(this.PID_Setting_Ki_DEC);
+            this.groupBox3.Controls.Add(this.label17);
+            this.groupBox3.Controls.Add(this.PID_Setting_Kp_DEC);
+            this.groupBox3.Controls.Add(this.label18);
+            this.groupBox3.Controls.Add(this.PID_Setting_Kd_RA);
+            this.groupBox3.Controls.Add(this.label19);
+            this.groupBox3.Controls.Add(this.PID_Setting_Ki_RA);
+            this.groupBox3.Controls.Add(this.label20);
+            this.groupBox3.Controls.Add(this.PID_Setting_Kp_RA);
             this.groupBox3.Controls.Add(this.label10);
             this.groupBox3.Controls.Add(this.label8);
             this.groupBox3.Controls.Add(this.PID_Setting_Nfilt_DEC);
             this.groupBox3.Controls.Add(this.label9);
             this.groupBox3.Controls.Add(this.PID_Setting_Nfilt_RA);
-            this.groupBox3.Controls.Add(this.radioButton2);
-            this.groupBox3.Controls.Add(this.radioButton1);
+            this.groupBox3.Controls.Add(this.ProcessingFilter);
+            this.groupBox3.Controls.Add(this.ProcessingTraditional);
             this.groupBox3.Controls.Add(this.label7);
             this.groupBox3.Controls.Add(this.RA);
             this.groupBox3.Controls.Add(this.label4);
-            this.groupBox3.Controls.Add(this.PID_Setting_Kd_DEC);
+            this.groupBox3.Controls.Add(this.PID_Setting_Kd_DEC_filter);
             this.groupBox3.Controls.Add(this.label5);
-            this.groupBox3.Controls.Add(this.PID_Setting_Ki_DEC);
+            this.groupBox3.Controls.Add(this.PID_Setting_Ki_DEC_filter);
             this.groupBox3.Controls.Add(this.label6);
-            this.groupBox3.Controls.Add(this.PID_Setting_Kp_DEC);
+            this.groupBox3.Controls.Add(this.PID_Setting_Kp_DEC_filter);
             this.groupBox3.Controls.Add(this.label3);
-            this.groupBox3.Controls.Add(this.PID_Setting_Kd_RA);
+            this.groupBox3.Controls.Add(this.PID_Setting_Kd_RA_filter);
             this.groupBox3.Controls.Add(this.label2);
-            this.groupBox3.Controls.Add(this.PID_Setting_Ki_RA);
+            this.groupBox3.Controls.Add(this.PID_Setting_Ki_RA_filter);
             this.groupBox3.Controls.Add(this.label1);
-            this.groupBox3.Controls.Add(this.PID_Setting_Kp_RA);
+            this.groupBox3.Controls.Add(this.PID_Setting_Kp_RA_filter);
             this.groupBox3.Location = new System.Drawing.Point(37, 219);
             this.groupBox3.Name = "groupBox3";
-            this.groupBox3.Size = new System.Drawing.Size(702, 197);
+            this.groupBox3.Size = new System.Drawing.Size(702, 239);
             this.groupBox3.TabIndex = 6;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "PID";
             // 
-            // label7
+            // label10
             // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(33, 87);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(29, 13);
-            this.label7.TabIndex = 13;
-            this.label7.Text = "DEC";
-            // 
-            // RA
-            // 
-            this.RA.AutoSize = true;
-            this.RA.Location = new System.Drawing.Point(33, 40);
-            this.RA.Name = "RA";
-            this.RA.Size = new System.Drawing.Size(22, 13);
-            this.RA.TabIndex = 12;
-            this.RA.Text = "RA";
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(310, 87);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(26, 13);
-            this.label4.TabIndex = 11;
-            this.label4.Text = "Kd=";
-            // 
-            // PID_Setting_Kd_DEC
-            // 
-            this.PID_Setting_Kd_DEC.Location = new System.Drawing.Point(336, 84);
-            this.PID_Setting_Kd_DEC.Name = "PID_Setting_Kd_DEC";
-            this.PID_Setting_Kd_DEC.Size = new System.Drawing.Size(62, 20);
-            this.PID_Setting_Kd_DEC.TabIndex = 10;
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(198, 87);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(22, 13);
-            this.label5.TabIndex = 9;
-            this.label5.Text = "Ki=";
-            // 
-            // PID_Setting_Ki_DEC
-            // 
-            this.PID_Setting_Ki_DEC.Location = new System.Drawing.Point(224, 84);
-            this.PID_Setting_Ki_DEC.Name = "PID_Setting_Ki_DEC";
-            this.PID_Setting_Ki_DEC.Size = new System.Drawing.Size(62, 20);
-            this.PID_Setting_Ki_DEC.TabIndex = 8;
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(82, 87);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(26, 13);
-            this.label6.TabIndex = 7;
-            this.label6.Text = "Kp=";
-            // 
-            // PID_Setting_Kp_DEC
-            // 
-            this.PID_Setting_Kp_DEC.Location = new System.Drawing.Point(108, 84);
-            this.PID_Setting_Kp_DEC.Name = "PID_Setting_Kp_DEC";
-            this.PID_Setting_Kp_DEC.Size = new System.Drawing.Size(62, 20);
-            this.PID_Setting_Kp_DEC.TabIndex = 6;
-            // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(310, 40);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(26, 13);
-            this.label3.TabIndex = 5;
-            this.label3.Text = "Kd=";
-            // 
-            // PID_Setting_Kd_RA
-            // 
-            this.PID_Setting_Kd_RA.Location = new System.Drawing.Point(336, 37);
-            this.PID_Setting_Kd_RA.Name = "PID_Setting_Kd_RA";
-            this.PID_Setting_Kd_RA.Size = new System.Drawing.Size(62, 20);
-            this.PID_Setting_Kd_RA.TabIndex = 4;
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(198, 40);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(22, 13);
-            this.label2.TabIndex = 3;
-            this.label2.Text = "Ki=";
-            // 
-            // PID_Setting_Ki_RA
-            // 
-            this.PID_Setting_Ki_RA.Location = new System.Drawing.Point(224, 37);
-            this.PID_Setting_Ki_RA.Name = "PID_Setting_Ki_RA";
-            this.PID_Setting_Ki_RA.Size = new System.Drawing.Size(62, 20);
-            this.PID_Setting_Ki_RA.TabIndex = 2;
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(82, 40);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(26, 13);
-            this.label1.TabIndex = 1;
-            this.label1.Text = "Kp=";
-            // 
-            // PID_Setting_Kp_RA
-            // 
-            this.PID_Setting_Kp_RA.Location = new System.Drawing.Point(108, 37);
-            this.PID_Setting_Kp_RA.Name = "PID_Setting_Kp_RA";
-            this.PID_Setting_Kp_RA.Size = new System.Drawing.Size(62, 20);
-            this.PID_Setting_Kp_RA.TabIndex = 0;
-            // 
-            // radioButton1
-            // 
-            this.radioButton1.AutoSize = true;
-            this.radioButton1.Location = new System.Drawing.Point(108, 125);
-            this.radioButton1.Name = "radioButton1";
-            this.radioButton1.Size = new System.Drawing.Size(74, 17);
-            this.radioButton1.TabIndex = 14;
-            this.radioButton1.TabStop = true;
-            this.radioButton1.Text = "Traditional";
-            this.radioButton1.UseVisualStyleBackColor = true;
-            // 
-            // radioButton2
-            // 
-            this.radioButton2.AutoSize = true;
-            this.radioButton2.Location = new System.Drawing.Point(201, 125);
-            this.radioButton2.Name = "radioButton2";
-            this.radioButton2.Size = new System.Drawing.Size(44, 17);
-            this.radioButton2.TabIndex = 15;
-            this.radioButton2.TabStop = true;
-            this.radioButton2.Text = "fitdir";
-            this.radioButton2.UseVisualStyleBackColor = true;
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(601, 16);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(62, 13);
+            this.label10.TabIndex = 20;
+            this.label10.Text = "Processing:";
             // 
             // label8
             // 
@@ -329,14 +232,265 @@ namespace ContraDrift
             this.PID_Setting_Nfilt_RA.Size = new System.Drawing.Size(62, 20);
             this.PID_Setting_Nfilt_RA.TabIndex = 16;
             // 
-            // label10
+            // ProcessingFilter
             // 
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(33, 127);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(62, 13);
-            this.label10.TabIndex = 20;
-            this.label10.Text = "Processing:";
+            this.ProcessingFilter.AutoSize = true;
+            this.ProcessingFilter.Location = new System.Drawing.Point(604, 63);
+            this.ProcessingFilter.Name = "ProcessingFilter";
+            this.ProcessingFilter.Size = new System.Drawing.Size(47, 17);
+            this.ProcessingFilter.TabIndex = 15;
+            this.ProcessingFilter.TabStop = true;
+            this.ProcessingFilter.Text = "Filter";
+            this.ProcessingFilter.UseVisualStyleBackColor = true;
+            // 
+            // ProcessingTraditional
+            // 
+            this.ProcessingTraditional.AutoSize = true;
+            this.ProcessingTraditional.Location = new System.Drawing.Point(604, 164);
+            this.ProcessingTraditional.Name = "ProcessingTraditional";
+            this.ProcessingTraditional.Size = new System.Drawing.Size(74, 17);
+            this.ProcessingTraditional.TabIndex = 14;
+            this.ProcessingTraditional.TabStop = true;
+            this.ProcessingTraditional.Text = "Traditional";
+            this.ProcessingTraditional.UseVisualStyleBackColor = true;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(33, 87);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(29, 13);
+            this.label7.TabIndex = 13;
+            this.label7.Text = "DEC";
+            // 
+            // RA
+            // 
+            this.RA.AutoSize = true;
+            this.RA.Location = new System.Drawing.Point(33, 40);
+            this.RA.Name = "RA";
+            this.RA.Size = new System.Drawing.Size(22, 13);
+            this.RA.TabIndex = 12;
+            this.RA.Text = "RA";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(310, 87);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(26, 13);
+            this.label4.TabIndex = 11;
+            this.label4.Text = "Kd=";
+            // 
+            // PID_Setting_Kd_DEC_filter
+            // 
+            this.PID_Setting_Kd_DEC_filter.Location = new System.Drawing.Point(336, 84);
+            this.PID_Setting_Kd_DEC_filter.Name = "PID_Setting_Kd_DEC_filter";
+            this.PID_Setting_Kd_DEC_filter.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Kd_DEC_filter.TabIndex = 10;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(198, 87);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(22, 13);
+            this.label5.TabIndex = 9;
+            this.label5.Text = "Ki=";
+            // 
+            // PID_Setting_Ki_DEC_filter
+            // 
+            this.PID_Setting_Ki_DEC_filter.Location = new System.Drawing.Point(224, 84);
+            this.PID_Setting_Ki_DEC_filter.Name = "PID_Setting_Ki_DEC_filter";
+            this.PID_Setting_Ki_DEC_filter.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Ki_DEC_filter.TabIndex = 8;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(82, 87);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(26, 13);
+            this.label6.TabIndex = 7;
+            this.label6.Text = "Kp=";
+            // 
+            // PID_Setting_Kp_DEC_filter
+            // 
+            this.PID_Setting_Kp_DEC_filter.Location = new System.Drawing.Point(108, 84);
+            this.PID_Setting_Kp_DEC_filter.Name = "PID_Setting_Kp_DEC_filter";
+            this.PID_Setting_Kp_DEC_filter.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Kp_DEC_filter.TabIndex = 6;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(310, 40);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(26, 13);
+            this.label3.TabIndex = 5;
+            this.label3.Text = "Kd=";
+            // 
+            // PID_Setting_Kd_RA_filter
+            // 
+            this.PID_Setting_Kd_RA_filter.Location = new System.Drawing.Point(336, 37);
+            this.PID_Setting_Kd_RA_filter.Name = "PID_Setting_Kd_RA_filter";
+            this.PID_Setting_Kd_RA_filter.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Kd_RA_filter.TabIndex = 4;
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(198, 40);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(22, 13);
+            this.label2.TabIndex = 3;
+            this.label2.Text = "Ki=";
+            // 
+            // PID_Setting_Ki_RA_filter
+            // 
+            this.PID_Setting_Ki_RA_filter.Location = new System.Drawing.Point(224, 37);
+            this.PID_Setting_Ki_RA_filter.Name = "PID_Setting_Ki_RA_filter";
+            this.PID_Setting_Ki_RA_filter.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Ki_RA_filter.TabIndex = 2;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(82, 40);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(26, 13);
+            this.label1.TabIndex = 1;
+            this.label1.Text = "Kp=";
+            // 
+            // PID_Setting_Kp_RA_filter
+            // 
+            this.PID_Setting_Kp_RA_filter.Location = new System.Drawing.Point(108, 37);
+            this.PID_Setting_Kp_RA_filter.Name = "PID_Setting_Kp_RA_filter";
+            this.PID_Setting_Kp_RA_filter.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Kp_RA_filter.TabIndex = 0;
+            // 
+            // label13
+            // 
+            this.label13.AutoSize = true;
+            this.label13.Location = new System.Drawing.Point(33, 189);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(29, 13);
+            this.label13.TabIndex = 34;
+            this.label13.Text = "DEC";
+            // 
+            // label14
+            // 
+            this.label14.AutoSize = true;
+            this.label14.Location = new System.Drawing.Point(33, 142);
+            this.label14.Name = "label14";
+            this.label14.Size = new System.Drawing.Size(22, 13);
+            this.label14.TabIndex = 33;
+            this.label14.Text = "RA";
+            // 
+            // label15
+            // 
+            this.label15.AutoSize = true;
+            this.label15.Location = new System.Drawing.Point(310, 189);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(26, 13);
+            this.label15.TabIndex = 32;
+            this.label15.Text = "Kd=";
+            // 
+            // PID_Setting_Kd_DEC
+            // 
+            this.PID_Setting_Kd_DEC.Location = new System.Drawing.Point(336, 186);
+            this.PID_Setting_Kd_DEC.Name = "PID_Setting_Kd_DEC";
+            this.PID_Setting_Kd_DEC.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Kd_DEC.TabIndex = 31;
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(198, 189);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(22, 13);
+            this.label16.TabIndex = 30;
+            this.label16.Text = "Ki=";
+            // 
+            // PID_Setting_Ki_DEC
+            // 
+            this.PID_Setting_Ki_DEC.Location = new System.Drawing.Point(224, 186);
+            this.PID_Setting_Ki_DEC.Name = "PID_Setting_Ki_DEC";
+            this.PID_Setting_Ki_DEC.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Ki_DEC.TabIndex = 29;
+            // 
+            // label17
+            // 
+            this.label17.AutoSize = true;
+            this.label17.Location = new System.Drawing.Point(82, 189);
+            this.label17.Name = "label17";
+            this.label17.Size = new System.Drawing.Size(26, 13);
+            this.label17.TabIndex = 28;
+            this.label17.Text = "Kp=";
+            // 
+            // PID_Setting_Kp_DEC
+            // 
+            this.PID_Setting_Kp_DEC.Location = new System.Drawing.Point(108, 186);
+            this.PID_Setting_Kp_DEC.Name = "PID_Setting_Kp_DEC";
+            this.PID_Setting_Kp_DEC.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Kp_DEC.TabIndex = 27;
+            // 
+            // label18
+            // 
+            this.label18.AutoSize = true;
+            this.label18.Location = new System.Drawing.Point(310, 142);
+            this.label18.Name = "label18";
+            this.label18.Size = new System.Drawing.Size(26, 13);
+            this.label18.TabIndex = 26;
+            this.label18.Text = "Kd=";
+            // 
+            // PID_Setting_Kd_RA
+            // 
+            this.PID_Setting_Kd_RA.Location = new System.Drawing.Point(336, 139);
+            this.PID_Setting_Kd_RA.Name = "PID_Setting_Kd_RA";
+            this.PID_Setting_Kd_RA.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Kd_RA.TabIndex = 25;
+            // 
+            // label19
+            // 
+            this.label19.AutoSize = true;
+            this.label19.Location = new System.Drawing.Point(198, 142);
+            this.label19.Name = "label19";
+            this.label19.Size = new System.Drawing.Size(22, 13);
+            this.label19.TabIndex = 24;
+            this.label19.Text = "Ki=";
+            // 
+            // PID_Setting_Ki_RA
+            // 
+            this.PID_Setting_Ki_RA.Location = new System.Drawing.Point(224, 139);
+            this.PID_Setting_Ki_RA.Name = "PID_Setting_Ki_RA";
+            this.PID_Setting_Ki_RA.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Ki_RA.TabIndex = 23;
+            // 
+            // label20
+            // 
+            this.label20.AutoSize = true;
+            this.label20.Location = new System.Drawing.Point(82, 142);
+            this.label20.Name = "label20";
+            this.label20.Size = new System.Drawing.Size(26, 13);
+            this.label20.TabIndex = 22;
+            this.label20.Text = "Kp=";
+            // 
+            // PID_Setting_Kp_RA
+            // 
+            this.PID_Setting_Kp_RA.Location = new System.Drawing.Point(108, 139);
+            this.PID_Setting_Kp_RA.Name = "PID_Setting_Kp_RA";
+            this.PID_Setting_Kp_RA.Size = new System.Drawing.Size(62, 20);
+            this.PID_Setting_Kp_RA.TabIndex = 21;
+            // 
+            // SaveButton
+            // 
+            this.SaveButton.Location = new System.Drawing.Point(464, 186);
+            this.SaveButton.Name = "SaveButton";
+            this.SaveButton.Size = new System.Drawing.Size(75, 23);
+            this.SaveButton.TabIndex = 35;
+            this.SaveButton.Text = "Save";
+            this.SaveButton.UseVisualStyleBackColor = true;
+            this.SaveButton.Click += new System.EventHandler(this.SaveButton_Click);
             // 
             // Form1
             // 
@@ -371,17 +525,17 @@ namespace ContraDrift
         private System.Windows.Forms.Button button3;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.TextBox PID_Setting_Kd_RA;
+        private System.Windows.Forms.TextBox PID_Setting_Kd_RA_filter;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.TextBox PID_Setting_Ki_RA;
+        private System.Windows.Forms.TextBox PID_Setting_Ki_RA_filter;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.TextBox PID_Setting_Kp_RA;
+        private System.Windows.Forms.TextBox PID_Setting_Kp_RA_filter;
         private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.TextBox PID_Setting_Kd_DEC;
+        private System.Windows.Forms.TextBox PID_Setting_Kd_DEC_filter;
         private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.TextBox PID_Setting_Ki_DEC;
+        private System.Windows.Forms.TextBox PID_Setting_Ki_DEC_filter;
         private System.Windows.Forms.Label label6;
-        private System.Windows.Forms.TextBox PID_Setting_Kp_DEC;
+        private System.Windows.Forms.TextBox PID_Setting_Kp_DEC_filter;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label RA;
         private System.Windows.Forms.Label label10;
@@ -389,8 +543,23 @@ namespace ContraDrift
         private System.Windows.Forms.TextBox PID_Setting_Nfilt_DEC;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.TextBox PID_Setting_Nfilt_RA;
-        private System.Windows.Forms.RadioButton radioButton2;
-        private System.Windows.Forms.RadioButton radioButton1;
+        private System.Windows.Forms.RadioButton ProcessingFilter;
+        private System.Windows.Forms.RadioButton ProcessingTraditional;
+        private System.Windows.Forms.Label label13;
+        private System.Windows.Forms.Label label14;
+        private System.Windows.Forms.Label label15;
+        private System.Windows.Forms.TextBox PID_Setting_Kd_DEC;
+        private System.Windows.Forms.Label label16;
+        private System.Windows.Forms.TextBox PID_Setting_Ki_DEC;
+        private System.Windows.Forms.Label label17;
+        private System.Windows.Forms.TextBox PID_Setting_Kp_DEC;
+        private System.Windows.Forms.Label label18;
+        private System.Windows.Forms.TextBox PID_Setting_Kd_RA;
+        private System.Windows.Forms.Label label19;
+        private System.Windows.Forms.TextBox PID_Setting_Ki_RA;
+        private System.Windows.Forms.Label label20;
+        private System.Windows.Forms.TextBox PID_Setting_Kp_RA;
+        private System.Windows.Forms.Button SaveButton;
     }
 }
 
