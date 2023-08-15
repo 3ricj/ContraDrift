@@ -68,12 +68,14 @@ namespace ContraDrift
         public Form1()
         {
             InitializeComponent();
+            ConfigureLogger();
             //LogManager.Setup().LoadConfigurationFromFile("nlog.config");
             //log = LogManager.GetCurrentClassLogger();
 
 
             textBox1.Text = settings.TelescopeProgId;
             textBox2.Text = settings.WatchFolder;
+            textBox3.Text = settings.UCAC4_path;
 
             PID_Setting_Kp_RA_filter.Text = settings.PID_Setting_Kp_RA_filter.ToString();
             PID_Setting_Ki_RA_filter.Text = settings.PID_Setting_Ki_RA_filter.ToString();
@@ -99,7 +101,7 @@ namespace ContraDrift
 
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void ConfigureLogger()
         {
             //log = LogManager.GetCurrentClassLogger();
             if (log == null) log = LogManager.GetCurrentClassLogger();
@@ -115,7 +117,7 @@ namespace ContraDrift
             // Rules for mapping loggers to targets            
             RichTextBoxTarget rtbTarget = new RichTextBoxTarget();
             rtbTarget.AutoScroll = true;
-            rtbTarget.AllowAccessoryFormCreation = false;
+            //rtbTarget.AllowAccessoryFormCreation = false;
 
             config.AddTarget("richTextBox1", rtbTarget);
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, rtbTarget);

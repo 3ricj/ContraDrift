@@ -35,6 +35,7 @@ namespace ContraDrift
             this.button2 = new System.Windows.Forms.Button();
             this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.button1 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.SaveButton = new System.Windows.Forms.Button();
@@ -77,8 +78,6 @@ namespace ContraDrift
             this.textBox3 = new System.Windows.Forms.TextBox();
             this.button4 = new System.Windows.Forms.Button();
             this.folderBrowserDialog2 = new System.Windows.Forms.FolderBrowserDialog();
-            this.button1 = new System.Windows.Forms.Button();
-            this.richTextBox1 = new System.Windows.Forms.RichTextBox();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -131,6 +130,16 @@ namespace ContraDrift
             this.groupBox2.TabIndex = 4;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "ASCOM";
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(16, 19);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(131, 29);
+            this.button1.TabIndex = 0;
+            this.button1.Text = "Select Telescope";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // button3
             // 
@@ -530,32 +539,11 @@ namespace ContraDrift
             this.button4.UseVisualStyleBackColor = true;
             this.button4.Click += new System.EventHandler(this.button4_Click);
             // 
-            // button1
-            // 
-            this.button1.Location = new System.Drawing.Point(16, 19);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(131, 29);
-            this.button1.TabIndex = 0;
-            this.button1.Text = "Select Telescope";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
-            // 
-            // richTextBox1
-            // 
-            this.richTextBox1.Location = new System.Drawing.Point(37, 546);
-            this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.ReadOnly = true;
-            this.richTextBox1.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.ForcedBoth;
-            this.richTextBox1.Size = new System.Drawing.Size(702, 200);
-            this.richTextBox1.TabIndex = 8;
-            this.richTextBox1.Text = "";
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(909, 758);
-            this.Controls.Add(this.richTextBox1);
             this.Controls.Add(this.PlatesolveGroupbox);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.button3);
@@ -625,7 +613,6 @@ namespace ContraDrift
         private System.Windows.Forms.Button button4;
         private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog2;
         private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.RichTextBox richTextBox1;
     }
 }
 
