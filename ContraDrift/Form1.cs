@@ -13,13 +13,16 @@ using System.IO;
 using PinPoint;
 using System.Runtime.InteropServices;
 using NLog;
+using NLog.Targets;
+using NLog.Windows.Forms;
 
 
 namespace ContraDrift
 {
     public partial class Form1 : Form
     {
-        Logger log = LogManager.GetCurrentClassLogger();
+        //Logger log = LogManager.GetCurrentClassLogger();
+        private static Logger log;
         static ContraDrift.Properties.Settings settings = Properties.Settings.Default;
         BackgroundWorker worker = new BackgroundWorker();
         FileSystemWatcher watcher = new FileSystemWatcher();
@@ -68,21 +71,6 @@ namespace ContraDrift
             //LogManager.Setup().LoadConfigurationFromFile("nlog.config");
             //log = LogManager.GetCurrentClassLogger();
 
-            var config = new NLog.Config.LoggingConfiguration();
-
-            // Targets where to log to: File and Console
-            var logfile = new NLog.Targets.FileTarget("logfile") { FileName = "${specialfolder:folder=MyDocuments}\\ContraDriftLog\\ContraDriftLog-${date:format=yyyy-MM-dd}.txt" };
-            var logconsole = new NLog.Targets.ConsoleTarget("logconsole");
-
-            // Rules for mapping loggers to targets            
-            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
-            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
-
-            // Apply config           
-            NLog.LogManager.Configuration = config;
-
-            log.Info("Starting up");
-
 
             textBox1.Text = settings.TelescopeProgId;
             textBox2.Text = settings.WatchFolder;
@@ -107,6 +95,37 @@ namespace ContraDrift
 
 
             settings.Status = "Stopped";
+
+
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            //log = LogManager.GetCurrentClassLogger();
+            if (log == null) log = LogManager.GetCurrentClassLogger();
+
+
+            var config = new NLog.Config.LoggingConfiguration();
+
+            // Targets where to log to: File and Console
+            var logfile = new NLog.Targets.FileTarget("logfile") { FileName = "${specialfolder:folder=MyDocuments}\\ContraDriftLog\\ContraDriftLog-${date:format=yyyy-MM-dd}.txt" };
+            var logconsole = new NLog.Targets.ConsoleTarget("logconsole");
+            //var logbox = new NLog.Targets
+
+            // Rules for mapping loggers to targets            
+            RichTextBoxTarget rtbTarget = new RichTextBoxTarget();
+            rtbTarget.AutoScroll = true;
+            rtbTarget.AllowAccessoryFormCreation = false;
+
+            config.AddTarget("richTextBox1", rtbTarget);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, rtbTarget);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
+
+            // Apply config           
+            NLog.LogManager.Configuration = config;
+
+            log.Info("Starting up");
 
 
         }
@@ -197,7 +216,7 @@ namespace ContraDrift
                 telescope = new Telescope(settings.TelescopeProgId);
                 telescope.Connected = true;
                 telescope.Tracking = true;
-                telescope.SlewToCoordinatesAsync(20.7333995798772, 45.3667092514744); //a blocking call for testing; 
+                //telescope.SlewToCoordinatesAsync(20.7333995798772, 45.3667092514744); //a blocking call for testing; 
                 
 
                 save_settings();
@@ -235,8 +254,8 @@ namespace ContraDrift
             _ = tFactory.StartNew(() =>
             {
 
-                double PlateRa = 0, PlateDec = 0, PlateExposureTime;
-                DateTime PlateLocaltime;
+
+
                 double ScopeRa, ScopeDec;
                 double ScopeRaRate, ScopeDecRate;
                 double dt_sec;
@@ -256,39 +275,8 @@ namespace ContraDrift
 
                 string InputFilename = e.FullPath;
                 log.Debug("New File: " + InputFilename);
-                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                Plate p = new Plate();
-                try { p.AttachFITS(InputFilename); } catch (Exception ex) { log.Debug(ex); }
+                (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) =  SolveFits(InputFilename);
 
-                p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
-                p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
-                p.RightAscension = p.TargetRightAscension;
-                p.Declination = p.TargetDeclination;
-                p.Catalog = (CatalogType)11;
-                p.CatalogPath = "J:/UCAC4";
-
-                try
-                {
-                    p.Solve();
-                    PlateRa = p.RightAscension;
-                    PlateDec = p.Declination;
-                    PlateLocaltime = p.ExposureStartTime;
-                    PlateExposureTime = p.ExposureInterval;
-                    //log.Info("Platesolve: {@InputFilename},{@RightAscension},{@PlateDec},{@PlateLocaltime},{@PlateExposureTime},{@AirMass},{@SolveTime},", InputFilename, PlateRa, PlateDec, PlateLocaltime, p.Airmass, stopwatch.ElapsedMilliseconds / 1000);
-                    log.Info("Platesolve: Filename: " + InputFilename + " PlateRa: " + PlateRa + " PlateDec: " + PlateDec + " PlateLocaltime: " + PlateLocaltime + " Airmass: " + p.Airmass + " Solvetime: " + (float) stopwatch.ElapsedMilliseconds / 1000);
-
-                }
-                catch (Exception ex) { log.Debug(ex); }
-
-                bool Solved = p.Solved;
-                DateTime ExposureStartTime = p.ExposureStartTime;
-                double ExposureInterval = p.ExposureInterval;
-
-                p.DetachFITS();
-                _ = Marshal.ReleaseComObject(p); // important or the com object leaks memory
-                
-
-                stopwatch.Stop();
 
 
                 ScopeRa = telescope.RightAscension;
@@ -306,14 +294,14 @@ namespace ContraDrift
                         FirstImage = false;
                         PlateRaReference = PlateRa;
                         PlateDecReference = PlateDec;
-                        LastExposureTime = ExposureStartTime.AddSeconds(ExposureInterval / 2);
-                        log.Debug("FirstImage:  PlateRa: " + PlateRa + ",PlateDec: " + PlateDec + ",ExposureStartTime: " + ExposureStartTime + ",ExposureInterval: " + ExposureInterval);
+                        LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
+                        log.Debug("FirstImage:  PlateRa: " + PlateRa + ",PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
 
                     }
                 }
                 else
                 {
-                    dt_sec = ((ExposureStartTime.AddSeconds(ExposureInterval / 2) - LastExposureTime).TotalMilliseconds)*1000;
+                    dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds)*1000;
 
                     // PID control for RA
                     PID_error_RA = ScopeRa - PlateRa;
@@ -397,10 +385,26 @@ namespace ContraDrift
                 // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
                 if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate)
                 {
-                    telescope.RightAscensionRate = new_RA_rate;
-                    telescope.DeclinationRate = new_DEC_rate;
-                    log.Debug("Setting RightAscensionRate: " + new_RA_rate);
-                    log.Debug("Setting DeclinationRate: " + new_DEC_rate);
+                    if (new_RA_rate < 0.1 && new_RA_rate > -0.1)
+                    {
+                        telescope.RightAscensionRate = new_RA_rate;
+                        log.Debug("Setting RightAscensionRate: " + new_RA_rate);
+
+                    }
+                    else
+                    {
+                        log.Debug("Refusing to set extreme Rate of " + new_RA_rate);
+                    }
+                                            
+                    if (new_DEC_rate < 0.1 && new_DEC_rate > -0.1)
+                    {
+                        telescope.DeclinationRate = new_DEC_rate;
+                        log.Debug("Setting DeclinationRate: " + new_DEC_rate);
+                    }
+                    else
+                    {
+                        log.Debug("Refusing to set extreme dec Rate of " + new_DEC_rate);
+                    }
                 }
                 else
                 {
@@ -426,6 +430,74 @@ namespace ContraDrift
         private void SaveButton_Click(object sender, EventArgs e)
         {
             save_settings();
+        }
+
+        public (bool, double, double, DateTime, double, double, float) SolveFits(string InputFilename)
+        {
+
+            double PlateRa = 0, PlateDec = 0, PlateExposureTime = 0;
+            DateTime PlateLocaltime = DateTime.Now;
+            double Airmass = 0;
+            float Solvetime = 0;
+            bool Solved = false;
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            Plate p = new Plate();
+            try { p.AttachFITS(InputFilename); } catch (Exception ex) { log.Debug(ex); }
+
+            p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
+            p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
+            p.RightAscension = p.TargetRightAscension;
+            p.Declination = p.TargetDeclination;
+            p.Catalog = (CatalogType)11;
+            p.CatalogPath = settings.UCAC4_path;
+
+
+            try
+            {
+                p.Solve();
+                PlateRa = p.RightAscension;
+                PlateDec = p.Declination;
+                PlateLocaltime = p.ExposureStartTime;
+                PlateExposureTime = p.ExposureInterval;
+                Airmass = p.Airmass;
+                Solved = p.Solved;
+
+                //log.Info("Platesolve: {@InputFilename},{@RightAscension},{@PlateDec},{@PlateLocaltime},{@PlateExposureTime},{@AirMass},{@SolveTime},", InputFilename, PlateRa, PlateDec, PlateLocaltime, p.Airmass, stopwatch.ElapsedMilliseconds / 1000);
+                log.Info("Platesolve: Filename: " + InputFilename + " PlateRa: " + PlateRa + " PlateDec: " + PlateDec + " PlateLocaltime: " + PlateLocaltime + " Airmass: " + p.Airmass + " Solvetime: " + (float)stopwatch.ElapsedMilliseconds / 1000);
+
+            }
+            catch (Exception ex) { log.Debug(ex); }
+
+
+
+            p.DetachFITS();
+            _ = Marshal.ReleaseComObject(p); // important or the com object leaks memory
+
+
+            stopwatch.Stop();
+            //  (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) =  SolveFits(InputFilename);
+            return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime);
+
+
+
+        }
+        //public Solves
+        public struct Platesolve
+            {
+            public string CatalogPath;
+            public CatalogType CatalogType;
+
+            };
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            folderBrowserDialog2.ShowDialog();
+            textBox3.Text = folderBrowserDialog2.SelectedPath;
+            settings.UCAC4_path = textBox3.Text;
+            settings.Save();
+            log.Info("Setting UCAC4 path to {@folder}", settings.WatchFolder);
+
         }
     }
         
