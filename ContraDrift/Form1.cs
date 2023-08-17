@@ -204,6 +204,8 @@ namespace ContraDrift
                 watcher.EnableRaisingEvents = false;
                 //watcher.Dispose();
 
+                telescope.RightAscensionRate = 0;
+                telescope.DeclinationRate = 0;
                 telescope.Connected = false;
                 telescope.Dispose();
 
@@ -222,7 +224,7 @@ namespace ContraDrift
                 telescope = new Telescope(settings.TelescopeProgId);
                 telescope.Connected = true;
                 telescope.Tracking = true;
-                telescope.SlewToCoordinatesAsync(20.7333995798772, 45.3667092514744); //a blocking call for testing; 
+                //telescope.SlewToCoordinatesAsync(20.7333995798772, 45.3667092514744); //a blocking call for testing; 
                 
 
                 save_settings();
