@@ -95,6 +95,10 @@ namespace ContraDrift
             PID_Setting_Ki_DEC.Text = settings.PID_Setting_Ki_DEC.ToString();
             PID_Setting_Kd_DEC.Text = settings.PID_Setting_Kd_DEC.ToString();
 
+            RaRateLimitTextBox.Text = settings.RaRateLimitSetting.ToString();
+            DecRateLimitTextBox.Text = settings.DecRateLimitSetting.ToString(); 
+
+
             if (settings.ProcessingTraditional) { ProcessingTraditional.Checked = true; } else { ProcessingFilter.Checked = true; }
 
 
@@ -181,6 +185,8 @@ namespace ContraDrift
                 settings.PID_Setting_Kp_DEC = float.Parse(PID_Setting_Kp_DEC.Text);
                 settings.PID_Setting_Ki_DEC = float.Parse(PID_Setting_Ki_DEC.Text);
                 settings.PID_Setting_Kd_DEC = float.Parse(PID_Setting_Kd_DEC.Text);
+                settings.DecRateLimitSetting = float.Parse(DecRateLimitTextBox.Text);
+                settings.RaRateLimitSetting = float.Parse(RaRateLimitTextBox.Text);
                 settings.Save();
             }
             catch { log.Debug("Problems with save settings"); } // some garbage input we just toss if we can't parse it. 
@@ -315,8 +321,11 @@ namespace ContraDrift
                     }
                 }
             else
-            {
-                dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) * 1000;
+                {
+                   dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
+                   //; PlateLocaltime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
+                   // TimeSpan ts = LastExposureTime - PlateLocaltime;
+                   // dt_sec = ts.TotalMilliseconds / 1000;
 
                 // PID control for RA
                 PID_propotional_RA = (PlateRa - PID_previous_PlateRa) * 54000;
@@ -407,48 +416,39 @@ namespace ContraDrift
             // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
             if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate )
             {
-                if (new_RA_rate < 1 && new_RA_rate > -1)
-                {
-                    telescope.RightAscensionRate = new_RA_rate / 15;
-                        log.Debug("Setting RightAscensionRate: " + new_RA_rate);
-
-                }
-                else
-                {
-                    log.Debug("Refusing to set extreme Rate of " + new_RA_rate);
-                }
-                                            
-                if (new_DEC_rate < 1 && new_DEC_rate > -1)
-                {
-                    telescope.DeclinationRate = new_DEC_rate * 0.9972695677;
-                    log.Debug("Setting DeclinationRate: " + new_DEC_rate);
-                }
-                else
-                {
-                    log.Debug("Refusing to set extreme dec Rate of " + new_DEC_rate);
-                }
+                if (new_RA_rate < float.Parse(RaRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text) * -1; }
+                if (new_RA_rate > float.Parse(RaRateLimitTextBox.Text) ) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text);  }
+                telescope.RightAscensionRate = new_RA_rate / 15;
+                log.Debug("Setting RightAscensionRate: " + new_RA_rate);
+                if (new_DEC_rate < float.Parse(DecRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text) * -1; }
+                if (new_DEC_rate > float.Parse(DecRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text);  }
+                telescope.DeclinationRate = new_DEC_rate * 0.9972695677;
+                log.Debug("Setting DeclinationRate: " + new_DEC_rate);
             }
             else
             {
                 log.Error("Telescope is not tracking!!! not setting tracking rates!!!"); 
             }
 
-            dataGridView1.Invoke(new Action(() => { 
+
+                dataGridView1.Invoke(new Action(() => { 
                 dataGridView1.Rows.Add(
                     DateTime.Now,
                     InputFilename,
                     String.Format("{0:0.000000}", PlateRa),
-                    String.Format("{0:0.00}", PID_propotional_RA),
-                    String.Format("{0:0.00}", PID_integral_RA),
+                    String.Format("{0:0.000}", PID_propotional_RA),
+                    String.Format("{0:0.000}", PID_integral_RA),
+                    String.Format("{0:0.0000}", PID_derivative_RA),
                     String.Format("{0:0.0000}", new_RA_rate),
 
 
                     String.Format("{0:0.000000}", PlateDec),
-                    String.Format("{0:0.00}", PID_propotional_DEC),
-                    String.Format("{0:0.00}", PID_integral_DEC),
+                    String.Format("{0:0.000}", PID_propotional_DEC),
+                    String.Format("{0:0.000}", PID_integral_DEC),
+                    String.Format("{0:0.0000}", PID_derivative_DEC),
                     String.Format("{0:0.0000}", new_DEC_rate)
                 );
-                dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(true) -1;
+                dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(false) -1;
                 }));
                 //dataGridView1.Invoke(new Action(() =>  { dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.SelectedRows[0].Index; }));
     
