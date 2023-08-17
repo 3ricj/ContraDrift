@@ -96,6 +96,7 @@ namespace ContraDrift
             this.DecShift = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.DecDerivative = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.NewDecRate = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.button5 = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -641,12 +642,12 @@ namespace ContraDrift
             // 
             // Export
             // 
-            this.Export.Location = new System.Drawing.Point(1934, 860);
+            this.Export.Location = new System.Drawing.Point(2011, 857);
             this.Export.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
             this.Export.Name = "Export";
             this.Export.Size = new System.Drawing.Size(150, 44);
             this.Export.TabIndex = 9;
-            this.Export.Text = "Export";
+            this.Export.Text = "CSV";
             this.Export.UseVisualStyleBackColor = true;
             this.Export.Click += new System.EventHandler(this.Export_Click);
             // 
@@ -796,11 +797,24 @@ namespace ContraDrift
             this.NewDecRate.ReadOnly = true;
             this.NewDecRate.Width = 182;
             // 
+            // button5
+            // 
+            this.button5.Location = new System.Drawing.Point(1838, 857);
+            this.button5.Margin = new System.Windows.Forms.Padding(6);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(150, 44);
+            this.button5.TabIndex = 10;
+            this.button5.Text = "Excel";
+            this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(2206, 1458);
+            this.AutoSize = true;
+            this.ClientSize = new System.Drawing.Size(2884, 1643);
+            this.Controls.Add(this.button5);
             this.Controls.Add(this.Export);
             this.Controls.Add(this.dataGridView1);
             this.Controls.Add(this.PlatesolveGroupbox);
@@ -808,8 +822,11 @@ namespace ContraDrift
             this.Controls.Add(this.button3);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.MinimumSize = new System.Drawing.Size(2878, 1700);
             this.Name = "Form1";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
             this.Text = "ContraDrift";
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
@@ -892,6 +909,7 @@ namespace ContraDrift
         private System.Windows.Forms.DataGridViewTextBoxColumn DecShift;
         private System.Windows.Forms.DataGridViewTextBoxColumn DecDerivative;
         private System.Windows.Forms.DataGridViewTextBoxColumn NewDecRate;
+        private System.Windows.Forms.Button button5;
     }
 }
 

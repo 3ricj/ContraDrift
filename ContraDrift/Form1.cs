@@ -1,20 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ASCOM.DriverAccess;
-using ASCOM.DeviceInterface;
 using System.IO;
 using PinPoint;
 using System.Runtime.InteropServices;
 using NLog;
-using NLog.Targets;
 using NLog.Windows.Forms;
+using Excel = Microsoft.Office.Interop.Excel;
 
 
 namespace ContraDrift
@@ -79,21 +74,21 @@ namespace ContraDrift
             textBox2.Text = settings.WatchFolder;
             textBox3.Text = settings.UCAC4_path;
 
-            PID_Setting_Kp_RA_filter.Text = settings.PID_Setting_Kp_RA_filter.ToString();
-            PID_Setting_Ki_RA_filter.Text = settings.PID_Setting_Ki_RA_filter.ToString();
-            PID_Setting_Kd_RA_filter.Text = settings.PID_Setting_Kd_RA_filter.ToString();
-            PID_Setting_Nfilt_RA.Text = settings.PID_Setting_Nfilt_RA.ToString();
-            PID_Setting_Kp_DEC_filter.Text = settings.PID_Setting_Kp_DEC_filter.ToString();
-            PID_Setting_Ki_DEC_filter.Text = settings.PID_Setting_Ki_DEC_filter.ToString();
-            PID_Setting_Kd_DEC_filter.Text = settings.PID_Setting_Kd_DEC_filter.ToString();
-            PID_Setting_Nfilt_DEC.Text = settings.PID_Setting_Nfilt_DEC.ToString();
+            PID_Setting_Kp_RA_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kp_RA_filter);
+            PID_Setting_Ki_RA_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Ki_RA_filter);
+            PID_Setting_Kd_RA_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kd_RA_filter);
+            PID_Setting_Nfilt_RA.Text = String.Format("{0:0.000000}", settings.PID_Setting_Nfilt_RA);
+            PID_Setting_Kp_DEC_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kp_DEC_filter);
+            PID_Setting_Ki_DEC_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Ki_DEC_filter);
+            PID_Setting_Kd_DEC_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kd_DEC_filter);
+            PID_Setting_Nfilt_DEC.Text = String.Format("{0:0.000000}", settings.PID_Setting_Nfilt_DEC);
 
-            PID_Setting_Kp_RA.Text = settings.PID_Setting_Kp_RA.ToString();
-            PID_Setting_Ki_RA.Text = settings.PID_Setting_Ki_RA.ToString();
-            PID_Setting_Kd_RA.Text = settings.PID_Setting_Kd_RA.ToString();
-            PID_Setting_Kp_DEC.Text = settings.PID_Setting_Kp_DEC.ToString();
-            PID_Setting_Ki_DEC.Text = settings.PID_Setting_Ki_DEC.ToString();
-            PID_Setting_Kd_DEC.Text = settings.PID_Setting_Kd_DEC.ToString();
+            PID_Setting_Kp_RA.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kp_RA);
+            PID_Setting_Ki_RA.Text = String.Format("{0:0.000000}", settings.PID_Setting_Ki_RA);
+            PID_Setting_Kd_RA.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kd_RA);
+            PID_Setting_Kp_DEC.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kp_DEC);
+            PID_Setting_Ki_DEC.Text = String.Format("{0:0.000000}", settings.PID_Setting_Ki_DEC);
+            PID_Setting_Kd_DEC.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kd_DEC);
 
             RaRateLimitTextBox.Text = settings.RaRateLimitSetting.ToString();
             DecRateLimitTextBox.Text = settings.DecRateLimitSetting.ToString(); 
@@ -134,7 +129,7 @@ namespace ContraDrift
             // Apply config           
             NLog.LogManager.Configuration = config;
 
-            log.Info("Starting up");
+            log.Info("Starting up. Build: " + Convert.ToString(System.IO.File.GetLastWriteTime(System.Reflection.Assembly.GetExecutingAssembly().Location)));
 
 
         }
@@ -215,7 +210,7 @@ namespace ContraDrift
                 telescope.Connected = false;
                 telescope.Dispose();
 
-
+                FirstImage = true;
 
             }
             else
@@ -322,88 +317,88 @@ namespace ContraDrift
                 }
             else
                 {
-                   dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
-                   //; PlateLocaltime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
-                   // TimeSpan ts = LastExposureTime - PlateLocaltime;
-                   // dt_sec = ts.TotalMilliseconds / 1000;
+                    dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
+                    log.Debug("dt_sec: " + dt_sec);
 
-                // PID control for RA
-                PID_propotional_RA = (PlateRa - PID_previous_PlateRa) * 54000;
-                PID_integral_RA = (PlateRa - PlateRaReference) * 54000;
-                PID_derivative_RA = (PID_propotional_RA - PID_previous_propotional_RA) / (dt_sec);
-                new_RA_rate = settings.PID_Setting_Kp_RA * PID_propotional_RA + settings.PID_Setting_Ki_RA * PID_integral_RA + settings.PID_Setting_Kd_RA * PID_derivative_RA;
+                    // PID control for RA
+                    PID_propotional_RA = (PlateRa - PID_previous_PlateRa) * 54000;
+                    PID_integral_RA = (PlateRa - PlateRaReference) * 54000;
+                    PID_derivative_RA = (PID_propotional_RA - PID_previous_propotional_RA) / (dt_sec);
+                    new_RA_rate = settings.PID_Setting_Kp_RA * PID_propotional_RA + settings.PID_Setting_Ki_RA * PID_integral_RA + settings.PID_Setting_Kd_RA * PID_derivative_RA;
 
 
-                // PID control for RA with IIF filtered derivative - set up dt dependent constants
-                A0_RA = settings.PID_Setting_Kp_RA_filter + settings.PID_Setting_Ki_RA_filter * dt_sec + settings.PID_Setting_Kd_RA_filter / dt_sec;
-                A1_RA = -settings.PID_Setting_Kp_RA_filter;
-                A0d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
-                A1d_RA = -2.0 * settings.PID_Setting_Kd_RA_filter / dt_sec;
-                A2d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
-                Nfilt_RA = settings.PID_Setting_Nfilt_RA;
-                tau_RA = settings.PID_Setting_Kd_RA_filter / (settings.PID_Setting_Kp_RA_filter * Nfilt_RA);
-                alpha_RA = dt_sec / (2.0 * tau_RA);
+                    // PID control for RA with IIF filtered derivative - set up dt dependent constants
+                    A0_RA = settings.PID_Setting_Kp_RA_filter + settings.PID_Setting_Ki_RA_filter * dt_sec + settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    A1_RA = -settings.PID_Setting_Kp_RA_filter;
+                    A0d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    A1d_RA = -2.0 * settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    A2d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    Nfilt_RA = settings.PID_Setting_Nfilt_RA;
+                    tau_RA = settings.PID_Setting_Kd_RA_filter / (settings.PID_Setting_Kp_RA_filter * Nfilt_RA);
+                    alpha_RA = dt_sec / (2.0 * tau_RA);
 
-                // Perform RA PID with IIF filtered derivative
-                PID_error_third_RA = PID_error_last_RA;
-                PID_error_last_RA = PID_previous_propotional_RA;
-                PID_error_new_RA = PID_propotional_RA;
-                PID_der1_RA = PID_der0_RA;
-                PID_der0_RA = A0d_RA * PID_error_new_RA + A1d_RA * PID_error_last_RA + A2d_RA * PID_error_third_RA;
-                fder0_RA = (alpha_RA / (alpha_RA + 1)) * (PID_der0_RA + PID_der1_RA) - ((alpha_RA - 1) / (alpha_RA + 1)) * PID_der1_RA;
-                new_RA_rate_filtder = A0_RA * PID_error_new_RA + A1_RA * PID_error_last_RA + fder0_RA;
+                    // Perform RA PID with IIF filtered derivative
+                    PID_error_third_RA = PID_error_last_RA;
+                    PID_error_last_RA = PID_previous_propotional_RA;
+                    PID_error_new_RA = PID_propotional_RA;
+                    PID_der1_RA = PID_der0_RA;
+                    PID_der0_RA = A0d_RA * PID_error_new_RA + A1d_RA * PID_error_last_RA + A2d_RA * PID_error_third_RA;
+                    fder0_RA = (alpha_RA / (alpha_RA + 1)) * (PID_der0_RA + PID_der1_RA) - ((alpha_RA - 1) / (alpha_RA + 1)) * PID_der1_RA;
+                    new_RA_rate_filtder = A0_RA * PID_error_new_RA + A1_RA * PID_error_last_RA + fder0_RA;
 
-                log.Debug("PID_RA:  PID_previous_propotional_RA: " + PID_previous_propotional_RA + ",PID_propotional_RA: " + PID_propotional_RA + ",PID_integral_RA: " + PID_integral_RA + ",PID_derivative_RA: " + PID_derivative_RA + ",new_RA_rate: " + new_RA_rate);
-                log.Debug("PID_RA_settings:  PID_Setting_Kp_RA: " + settings.PID_Setting_Kp_RA + ",PID_Setting_Ki_RA: " + settings.PID_Setting_Ki_RA + ",PID_Setting_Kd_RA: " + settings.PID_Setting_Kd_RA);
-                log.Debug("PID_RA_filter settings:  PID_Setting_Kp_RA_filter: " + settings.PID_Setting_Kp_RA_filter + ",PID_Setting_Ki_RA_filter: " + settings.PID_Setting_Ki_RA_filter + ",PID_Setting_Kd_RA_filter: " + settings.PID_Setting_Kd_RA_filter + ",PID_Setting_Nfilt_RA: " + settings.PID_Setting_Nfilt_RA);
-                log.Debug("PID_RA_Filter:  fder0_RA: " + fder0_RA);
+                    log.Debug("PID_RA:  PID_previous_propotional_RA: " + PID_previous_propotional_RA + ",PID_propotional_RA: " + PID_propotional_RA + ",PID_integral_RA: " + PID_integral_RA + ",PID_derivative_RA: " + PID_derivative_RA + ",new_RA_rate: " + new_RA_rate);
+                    log.Debug("PID_RA_settings:  PID_Setting_Kp_RA: " + settings.PID_Setting_Kp_RA + ",PID_Setting_Ki_RA: " + settings.PID_Setting_Ki_RA + ",PID_Setting_Kd_RA: " + settings.PID_Setting_Kd_RA);
+                    log.Debug("PID_RA_filter settings:  PID_Setting_Kp_RA_filter: " + settings.PID_Setting_Kp_RA_filter + ",PID_Setting_Ki_RA_filter: " + settings.PID_Setting_Ki_RA_filter + ",PID_Setting_Kd_RA_filter: " + settings.PID_Setting_Kd_RA_filter + ",PID_Setting_Nfilt_RA: " + settings.PID_Setting_Nfilt_RA);
+                    log.Debug("PID_RA_Filter:  fder0_RA: " + fder0_RA);
 
 
 
-                // standard PID control for DEC
-                PID_propotional_DEC = (PlateDec - PID_previous_PlateDec) * 3600;
-                PID_integral_DEC = (PlateDec - PlateDecReference) * 3600;
-                PID_derivative_DEC = (PID_propotional_DEC - PID_previous_propotional_DEC) / (dt_sec);
-                new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
+                    // standard PID control for DEC
+                    PID_propotional_DEC = (PlateDec - PID_previous_PlateDec) * 3600;
+                    PID_integral_DEC = (PlateDec - PlateDecReference) * 3600;
+                    PID_derivative_DEC = (PID_propotional_DEC - PID_previous_propotional_DEC) / (dt_sec);
+                    new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
 
 
 
-                // PID control for DEC with IIF filtered derivative - set up dt dependent constants
-                A0_DEC = settings.PID_Setting_Kp_DEC_filter + settings.PID_Setting_Ki_DEC_filter * dt_sec + settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                A1_DEC = -settings.PID_Setting_Kp_DEC_filter;
-                A0d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                A1d_DEC = -2.0 * settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                A2d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                Nfilt_DEC = settings.PID_Setting_Nfilt_DEC;
-                tau_DEC = settings.PID_Setting_Kd_DEC_filter / (settings.PID_Setting_Kp_DEC_filter * Nfilt_DEC);
-                alpha_DEC = dt_sec / (2.0 * tau_DEC);
+                    // PID control for DEC with IIF filtered derivative - set up dt dependent constants
+                    A0_DEC = settings.PID_Setting_Kp_DEC_filter + settings.PID_Setting_Ki_DEC_filter * dt_sec + settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    A1_DEC = -settings.PID_Setting_Kp_DEC_filter;
+                    A0d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    A1d_DEC = -2.0 * settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    A2d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    Nfilt_DEC = settings.PID_Setting_Nfilt_DEC;
+                    tau_DEC = settings.PID_Setting_Kd_DEC_filter / (settings.PID_Setting_Kp_DEC_filter * Nfilt_DEC);
+                    alpha_DEC = dt_sec / (2.0 * tau_DEC);
 
-                // Perform DEC PID with IIF filtered derivative
-                PID_error_third_DEC = PID_error_last_DEC;
-                PID_error_last_DEC = PID_previous_propotional_DEC;
-                PID_error_new_DEC = PID_propotional_DEC;
-                PID_der1_DEC = PID_der0_DEC;
-                PID_der0_DEC = A0d_DEC * PID_error_new_DEC + A1d_DEC * PID_error_last_DEC + A2d_DEC * PID_error_third_DEC;
-                fder0_DEC = (alpha_DEC / (alpha_DEC + 1)) * (PID_der0_DEC + PID_der1_DEC) - ((alpha_DEC - 1) / (alpha_DEC + 1)) * PID_der1_DEC;
-                new_DEC_rate_filtder = A0_DEC * PID_error_new_DEC + A1_DEC * PID_error_last_DEC + fder0_DEC;
+                    // Perform DEC PID with IIF filtered derivative
+                    PID_error_third_DEC = PID_error_last_DEC;
+                    PID_error_last_DEC = PID_previous_propotional_DEC;
+                    PID_error_new_DEC = PID_propotional_DEC;
+                    PID_der1_DEC = PID_der0_DEC;
+                    PID_der0_DEC = A0d_DEC * PID_error_new_DEC + A1d_DEC * PID_error_last_DEC + A2d_DEC * PID_error_third_DEC;
+                    fder0_DEC = (alpha_DEC / (alpha_DEC + 1)) * (PID_der0_DEC + PID_der1_DEC) - ((alpha_DEC - 1) / (alpha_DEC + 1)) * PID_der1_DEC;
+                    new_DEC_rate_filtder = A0_DEC * PID_error_new_DEC + A1_DEC * PID_error_last_DEC + fder0_DEC;
 
-                log.Debug("PID_DEC:  PID_previous_propotional_DEC: " + PID_previous_propotional_DEC + ",PID_propotional_DEC: " + PID_propotional_DEC + ",PID_integral_DEC: " + PID_integral_DEC + ",PID_derivative_DEC: " + PID_derivative_DEC + ",new_DEC_rate: " + new_DEC_rate);
-                log.Debug("PID_DEC_settings:  PID_Setting_Kp_DEC: " + settings.PID_Setting_Kp_DEC + ",PID_Setting_Ki_DEC: " + settings.PID_Setting_Ki_DEC + ",PID_Setting_Kd_DEC: " + settings.PID_Setting_Kd_DEC);
-                log.Debug("PID_DEC_filter settings:  PID_Setting_Kp_DEC_filter: " + settings.PID_Setting_Kp_DEC_filter + ",PID_Setting_Ki_DEC_filter: " + settings.PID_Setting_Ki_DEC_filter + ",PID_Setting_Kd_DEC_filter: " + settings.PID_Setting_Kd_DEC_filter + ",PID_Setting_Nfilt_DEC: " + settings.PID_Setting_Nfilt_DEC);
-                log.Debug("PID_DEC_Filter:  fder0_DEC: " + fder0_DEC);
+                    log.Debug("PID_DEC:  PID_previous_propotional_DEC: " + PID_previous_propotional_DEC + ",PID_propotional_DEC: " + PID_propotional_DEC + ",PID_integral_DEC: " + PID_integral_DEC + ",PID_derivative_DEC: " + PID_derivative_DEC + ",new_DEC_rate: " + new_DEC_rate);
+                    log.Debug("PID_DEC_settings:  PID_Setting_Kp_DEC: " + settings.PID_Setting_Kp_DEC + ",PID_Setting_Ki_DEC: " + settings.PID_Setting_Ki_DEC + ",PID_Setting_Kd_DEC: " + settings.PID_Setting_Kd_DEC);
+                    log.Debug("PID_DEC_filter settings:  PID_Setting_Kp_DEC_filter: " + settings.PID_Setting_Kp_DEC_filter + ",PID_Setting_Ki_DEC_filter: " + settings.PID_Setting_Ki_DEC_filter + ",PID_Setting_Kd_DEC_filter: " + settings.PID_Setting_Kd_DEC_filter + ",PID_Setting_Nfilt_DEC: " + settings.PID_Setting_Nfilt_DEC);
+                    log.Debug("PID_DEC_Filter:  fder0_DEC: " + fder0_DEC);
 
 
-                PID_previous_3rd_propotional_RA = PID_previous_propotional_RA;
-                PID_previous_3rd_propotional_DEC = PID_previous_propotional_DEC;
-                PID_previous_propotional_RA = PID_propotional_RA;
-                PID_previous_propotional_DEC = PID_propotional_DEC;
-                PID_previous_PlateDec = PlateDec;
-                PID_previous_PlateRa = PlateRa;
+                    PID_previous_3rd_propotional_RA = PID_previous_propotional_RA;
+                    PID_previous_3rd_propotional_DEC = PID_previous_propotional_DEC;
+                    PID_previous_propotional_RA = PID_propotional_RA;
+                    PID_previous_propotional_DEC = PID_propotional_DEC;
+                    PID_previous_PlateDec = PlateDec;
+                    PID_previous_PlateRa = PlateRa;
+                    LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
 
-                log.Info("RA drift: " + PID_integral_RA);
-                log.Info("DEC drift: " + PID_integral_DEC);
 
-            }
+                    log.Info("RA drift: " + PID_integral_RA);
+                    log.Info("DEC drift: " + PID_integral_DEC);
+
+                }
 
             if (ProcessingFilter.Checked)
             {
@@ -427,7 +422,9 @@ namespace ContraDrift
             }
             else
             {
-                log.Error("Telescope is not tracking!!! not setting tracking rates!!!"); 
+                log.Error("Telescope is not tracking!!! not setting tracking rates!!!");
+                FirstImage = true; // reset everything, reference image etc.  
+
             }
 
 
@@ -546,7 +543,7 @@ namespace ContraDrift
             {
                 SaveFileDialog sfd = new SaveFileDialog();
                 sfd.Filter = "CSV (*.csv)|*.csv";
-                sfd.FileName = "Output.csv";
+                sfd.FileName = DateTime.Now.ToString("yyyy-MM-dd HHMMss") + " - ContraDrift.csv";
                 bool fileError = false;
                 if (sfd.ShowDialog() == DialogResult.OK)
                 {
@@ -596,6 +593,47 @@ namespace ContraDrift
             else
             {
                 MessageBox.Show("No Record To Export !!!", "Info");
+            }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "Excel (*.xls)|*.xls";
+            sfd.FileName = DateTime.Now.ToString("yyyy-MM-dd HHMMss") + " - ContraDrift.xls";
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+
+                Excel.Application xlApp;
+                Excel.Workbook xlWorkBook;
+                Excel.Worksheet xlWorkSheet;
+                object misValue = System.Reflection.Missing.Value;
+                xlApp = new Excel.Application();
+                xlWorkBook = xlApp.Workbooks.Add(misValue);
+                xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
+                int i = 0;
+                int j = 0;
+
+                for (j = 0; j <= dataGridView1.ColumnCount - 1; j++)
+                {
+                    xlWorkSheet.Cells[1, j + 1] = dataGridView1.Columns[j].HeaderText.ToString();
+                }
+
+                for (i = 0; i <= dataGridView1.RowCount - 1; i++)
+                {
+                    for (j = 0; j <= dataGridView1.ColumnCount - 1; j++)
+                    {
+                        DataGridViewCell cell = dataGridView1[j, i];
+                        xlWorkSheet.Cells[i + 2, j + 1] = cell.Value;
+                    }
+                }
+                xlWorkBook.SaveAs(sfd.FileName, Excel.XlFileFormat.xlWorkbookNormal, misValue, misValue, misValue, misValue, Excel.XlSaveAsAccessMode.xlExclusive, misValue, misValue, misValue, misValue, misValue);
+                xlWorkBook.Close(true, misValue, misValue);
+                xlApp.Quit();
+
+                System.Diagnostics.Process.Start(@sfd.FileName);
+
             }
         }
     }
