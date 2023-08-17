@@ -251,6 +251,7 @@ namespace ContraDrift
                 }
                 watcher.EnableRaisingEvents = true;
                 log.Debug("Watcher Enabled: " + watcher.Path);
+
             }
         }
 
@@ -288,13 +289,14 @@ namespace ContraDrift
             (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) = SolveFits(InputFilename);
 
 
-
             ScopeRa = telescope.RightAscension;
             ScopeDec = telescope.Declination;
             ScopeRaRate = telescope.RightAscensionRate / 15; //  arcsec to RA Sec per sidereal second divide by 15.  
             ScopeDecRate = telescope.DeclinationRate;
 
             log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec + ",ScopeRaRate: " + ScopeRaRate + ",ScopeDecRate: " + ScopeDecRate);
+
+                if (!Solved) { log.Error("Platesolved failed! ");  return;  }
 
 
             if (FirstImage)
@@ -401,11 +403,11 @@ namespace ContraDrift
             }
 
             // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
-            if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate)
+            if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate )
             {
                 if (new_RA_rate < 1 && new_RA_rate > -1)
                 {
-                    telescope.RightAscensionRate = new_RA_rate * 0.9972695677;
+                    telescope.RightAscensionRate = new_RA_rate / 15;
                         log.Debug("Setting RightAscensionRate: " + new_RA_rate);
 
                 }
@@ -429,7 +431,25 @@ namespace ContraDrift
                 log.Error("Telescope is not tracking!!! not setting tracking rates!!!"); 
             }
 
+            dataGridView1.Invoke(new Action(() => { 
+                dataGridView1.Rows.Add(
+                    DateTime.Now,
+                    InputFilename,
+                    String.Format("{0:0.000000}", PlateRa),
+                    String.Format("{0:0.00}", PID_propotional_RA),
+                    String.Format("{0:0.00}", PID_integral_RA),
+                    String.Format("{0:0.0000}", new_RA_rate),
 
+
+                    String.Format("{0:0.000000}", PlateDec),
+                    String.Format("{0:0.00}", PID_propotional_DEC),
+                    String.Format("{0:0.00}", PID_integral_DEC),
+                    String.Format("{0:0.0000}", new_DEC_rate)
+                );
+                dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(true) -1;
+                }));
+                //dataGridView1.Invoke(new Action(() =>  { dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.SelectedRows[0].Index; }));
+    
 
             }).ContinueWith(t =>
             {
@@ -516,6 +536,65 @@ namespace ContraDrift
             settings.Save();
             log.Info("Setting UCAC4 path to {@folder}", settings.WatchFolder);
 
+        }
+
+        private void Export_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.Rows.Count > 0)
+            {
+                SaveFileDialog sfd = new SaveFileDialog();
+                sfd.Filter = "CSV (*.csv)|*.csv";
+                sfd.FileName = "Output.csv";
+                bool fileError = false;
+                if (sfd.ShowDialog() == DialogResult.OK)
+                {
+                    if (File.Exists(sfd.FileName))
+                    {
+                        try
+                        {
+                            File.Delete(sfd.FileName);
+                        }
+                        catch (IOException ex)
+                        {
+                            fileError = true;
+                            MessageBox.Show("It wasn't possible to write the data to the disk." + ex.Message);
+                        }
+                    }
+                    if (!fileError)
+                    {
+                        try
+                        {
+                            int columnCount = dataGridView1.Columns.Count;
+                            string columnNames = "";
+                            string[] outputCsv = new string[dataGridView1.Rows.Count + 1];
+                            for (int i = 0; i < columnCount; i++)
+                            {
+                                columnNames += dataGridView1.Columns[i].HeaderText.ToString() + ",";
+                            }
+                            outputCsv[0] += columnNames;
+
+                            for (int i = 1; (i - 1) < dataGridView1.Rows.Count; i++)
+                            {
+                                for (int j = 0; j < columnCount; j++)
+                                {
+                                    outputCsv[i] += dataGridView1.Rows[i - 1].Cells[j].Value.ToString() + ",";
+                                }
+                            }
+
+                            File.WriteAllLines(sfd.FileName, outputCsv, Encoding.UTF8);
+                            //MessageBox.Show("Data Exported Successfully !!!", "Info");
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Error :" + ex.Message);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("No Record To Export !!!", "Info");
+            }
         }
     }
         

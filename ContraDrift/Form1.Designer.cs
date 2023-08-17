@@ -78,10 +78,23 @@ namespace ContraDrift
             this.textBox3 = new System.Windows.Forms.TextBox();
             this.button4 = new System.Windows.Forms.Button();
             this.folderBrowserDialog2 = new System.Windows.Forms.FolderBrowserDialog();
+            this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.Timestamp = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Filename = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.PlateRa = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.RaShift = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.RaDrift = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.NewRaRate = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.PlateDec = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.DecShift = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.DecDrift = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.NewDecRate = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Export = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.PlatesolveGroupbox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.SuspendLayout();
             // 
             // textBox1
@@ -143,7 +156,7 @@ namespace ContraDrift
             // 
             // button3
             // 
-            this.button3.Location = new System.Drawing.Point(53, 494);
+            this.button3.Location = new System.Drawing.Point(776, 27);
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(92, 29);
             this.button3.TabIndex = 5;
@@ -198,7 +211,7 @@ namespace ContraDrift
             // 
             // SaveButton
             // 
-            this.SaveButton.Location = new System.Drawing.Point(464, 186);
+            this.SaveButton.Location = new System.Drawing.Point(588, 183);
             this.SaveButton.Name = "SaveButton";
             this.SaveButton.Size = new System.Drawing.Size(75, 23);
             this.SaveButton.TabIndex = 35;
@@ -383,7 +396,7 @@ namespace ContraDrift
             // ProcessingTraditional
             // 
             this.ProcessingTraditional.AutoSize = true;
-            this.ProcessingTraditional.Location = new System.Drawing.Point(604, 164);
+            this.ProcessingTraditional.Location = new System.Drawing.Point(604, 138);
             this.ProcessingTraditional.Name = "ProcessingTraditional";
             this.ProcessingTraditional.Size = new System.Drawing.Size(74, 17);
             this.ProcessingTraditional.TabIndex = 14;
@@ -539,11 +552,123 @@ namespace ContraDrift
             this.button4.UseVisualStyleBackColor = true;
             this.button4.Click += new System.EventHandler(this.button4_Click);
             // 
+            // dataGridView1
+            // 
+            this.dataGridView1.AllowUserToAddRows = false;
+            this.dataGridView1.AllowUserToDeleteRows = false;
+            this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.Timestamp,
+            this.Filename,
+            this.PlateRa,
+            this.RaShift,
+            this.RaDrift,
+            this.NewRaRate,
+            this.PlateDec,
+            this.DecShift,
+            this.DecDrift,
+            this.NewDecRate});
+            this.dataGridView1.Location = new System.Drawing.Point(37, 491);
+            this.dataGridView1.Name = "dataGridView1";
+            this.dataGridView1.ReadOnly = true;
+            this.dataGridView1.Size = new System.Drawing.Size(1013, 255);
+            this.dataGridView1.TabIndex = 8;
+            // 
+            // Timestamp
+            // 
+            this.Timestamp.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.Timestamp.HeaderText = "Timestamp";
+            this.Timestamp.Name = "Timestamp";
+            this.Timestamp.ReadOnly = true;
+            this.Timestamp.Width = 83;
+            // 
+            // Filename
+            // 
+            this.Filename.HeaderText = "Filename";
+            this.Filename.Name = "Filename";
+            this.Filename.ReadOnly = true;
+            // 
+            // PlateRa
+            // 
+            this.PlateRa.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.PlateRa.HeaderText = "PlateRa";
+            this.PlateRa.Name = "PlateRa";
+            this.PlateRa.ReadOnly = true;
+            this.PlateRa.Width = 70;
+            // 
+            // RaShift
+            // 
+            this.RaShift.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.RaShift.HeaderText = "RaShift";
+            this.RaShift.Name = "RaShift";
+            this.RaShift.ReadOnly = true;
+            this.RaShift.Width = 67;
+            // 
+            // RaDrift
+            // 
+            this.RaDrift.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.RaDrift.HeaderText = "RaDrift";
+            this.RaDrift.Name = "RaDrift";
+            this.RaDrift.ReadOnly = true;
+            this.RaDrift.Width = 65;
+            // 
+            // NewRaRate
+            // 
+            this.NewRaRate.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.NewRaRate.HeaderText = "NewRaRate";
+            this.NewRaRate.Name = "NewRaRate";
+            this.NewRaRate.ReadOnly = true;
+            this.NewRaRate.Width = 91;
+            // 
+            // PlateDec
+            // 
+            this.PlateDec.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.PlateDec.HeaderText = "PlateDec";
+            this.PlateDec.Name = "PlateDec";
+            this.PlateDec.ReadOnly = true;
+            this.PlateDec.Width = 76;
+            // 
+            // DecShift
+            // 
+            this.DecShift.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.DecShift.HeaderText = "DecShift";
+            this.DecShift.Name = "DecShift";
+            this.DecShift.ReadOnly = true;
+            this.DecShift.Width = 73;
+            // 
+            // DecDrift
+            // 
+            this.DecDrift.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.DecDrift.HeaderText = "DecDrift";
+            this.DecDrift.Name = "DecDrift";
+            this.DecDrift.ReadOnly = true;
+            this.DecDrift.Width = 71;
+            // 
+            // NewDecRate
+            // 
+            this.NewDecRate.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.NewDecRate.HeaderText = "NewDecRate";
+            this.NewDecRate.Name = "NewDecRate";
+            this.NewDecRate.ReadOnly = true;
+            this.NewDecRate.Width = 97;
+            // 
+            // Export
+            // 
+            this.Export.Location = new System.Drawing.Point(967, 447);
+            this.Export.Name = "Export";
+            this.Export.Size = new System.Drawing.Size(75, 23);
+            this.Export.TabIndex = 9;
+            this.Export.Text = "Export";
+            this.Export.UseVisualStyleBackColor = true;
+            this.Export.Click += new System.EventHandler(this.Export_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(909, 758);
+            this.ClientSize = new System.Drawing.Size(1062, 758);
+            this.Controls.Add(this.Export);
+            this.Controls.Add(this.dataGridView1);
             this.Controls.Add(this.PlatesolveGroupbox);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.button3);
@@ -559,6 +684,7 @@ namespace ContraDrift
             this.groupBox3.PerformLayout();
             this.PlatesolveGroupbox.ResumeLayout(false);
             this.PlatesolveGroupbox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -613,6 +739,18 @@ namespace ContraDrift
         private System.Windows.Forms.Button button4;
         private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog2;
         private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.DataGridView dataGridView1;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Timestamp;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Filename;
+        private System.Windows.Forms.DataGridViewTextBoxColumn PlateRa;
+        private System.Windows.Forms.DataGridViewTextBoxColumn RaShift;
+        private System.Windows.Forms.DataGridViewTextBoxColumn RaDrift;
+        private System.Windows.Forms.DataGridViewTextBoxColumn NewRaRate;
+        private System.Windows.Forms.DataGridViewTextBoxColumn PlateDec;
+        private System.Windows.Forms.DataGridViewTextBoxColumn DecShift;
+        private System.Windows.Forms.DataGridViewTextBoxColumn DecDrift;
+        private System.Windows.Forms.DataGridViewTextBoxColumn NewDecRate;
+        private System.Windows.Forms.Button Export;
     }
 }
 
