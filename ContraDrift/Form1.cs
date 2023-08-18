@@ -247,7 +247,7 @@ namespace ContraDrift
 
                     watcher.Created += new FileSystemEventHandler(ProcessNewFits);
                     watcher.Renamed += new RenamedEventHandler(ProcessNewFits);
-                    watcher.Changed += new FileSystemEventHandler(ProcessNewFits);
+                    //watcher.Changed += new FileSystemEventHandler(ProcessNewFits);
 
                     watcher.Filter = "*.fits";
 
@@ -290,8 +290,10 @@ namespace ContraDrift
                 string InputFilename = e.FullPath;
                 log.Debug("New File: " + InputFilename);
                 (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) = SolveFits(InputFilename);
-                double PlateRaArcSec = PlateRa * 54000;
-                double PlateDecArcSec = PlateDec * 3600;
+
+
+                double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
+                double PlateDecArcSec = PlateDec * 3600; // convert from degrees to arcsec
 
                 ScopeRa = telescope.RightAscension;
                 ScopeDec = telescope.Declination;
@@ -314,11 +316,13 @@ namespace ContraDrift
                         log.Debug("FirstImage:  PlateRa: " + PlateRa + ",PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
                             PID_previous_PlateRa = PlateRaArcSec;
                             PID_previous_PlateDec = PlateDecArcSec;
-                        }
+                            PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
                     }
+
+                }
                 else
                 {
-                    dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) * 1000;
+                    dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
 
                         // PID control for RA
                     PID_propotional_RA = (PlateRaArcSec - PID_previous_PlateRa) / (dt_sec); ;
@@ -395,7 +399,7 @@ namespace ContraDrift
                     LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
 
                     log.Info("RA drift: " + PID_integral_RA);
-                log.Info("DEC drift: " + PID_integral_DEC);
+                    log.Info("DEC drift: " + PID_integral_DEC);
 
                 }
 
@@ -432,16 +436,16 @@ namespace ContraDrift
                     DateTime.Now,
                     InputFilename,
                     String.Format("{0:0.000000}", PlateRa),
-                    String.Format("{0:0.000}", PID_propotional_RA),
-                    String.Format("{0:0.000}", PID_integral_RA),
-                    String.Format("{0:0.0000}", PID_derivative_RA),
+                    String.Format("{0:0.00000}", PID_propotional_RA),
+                    String.Format("{0:0.00000}", PID_integral_RA),
+                    String.Format("{0:0.00000}", PID_derivative_RA),
                     String.Format("{0:0.0000}", new_RA_rate),
 
 
                     String.Format("{0:0.000000}", PlateDec),
-                    String.Format("{0:0.000}", PID_propotional_DEC),
-                    String.Format("{0:0.000}", PID_integral_DEC),
-                    String.Format("{0:0.0000}", PID_derivative_DEC),
+                    String.Format("{0:0.00000}", PID_propotional_DEC),
+                    String.Format("{0:0.00000}", PID_integral_DEC),
+                    String.Format("{0:0.00000}", PID_derivative_DEC),
                     String.Format("{0:0.0000}", new_DEC_rate)
                 );
                 dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(false) -1;
@@ -479,21 +483,18 @@ namespace ContraDrift
 
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             Plate p = new Plate();
-            try { p.AttachFITS(InputFilename); } catch (Exception ex) { log.Debug(ex); }
+            try {
 
-            p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
-            p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
-            p.RightAscension = p.TargetRightAscension;
-            p.Declination = p.TargetDeclination;
-            p.Catalog = (CatalogType)11;
-            p.CatalogPath = settings.UCAC4_path;
-
-
-            try
-            {
+                p.AttachFITS(InputFilename);
+                p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
+                p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
+                p.RightAscension = p.TargetRightAscension;
+                p.Declination = p.TargetDeclination;
+                p.Catalog = (CatalogType)11;
+                p.CatalogPath = settings.UCAC4_path;
                 p.Solve();
-                PlateRa = p.RightAscension;
-                PlateDec = p.Declination;
+                PlateRa = p.RightAscension; // in hours
+                PlateDec = p.Declination;  // in degrees
                 PlateLocaltime = p.ExposureStartTime;
                 PlateExposureTime = p.ExposureInterval;
                 Airmass = p.Airmass;
@@ -503,8 +504,13 @@ namespace ContraDrift
                 log.Info("Platesolve: Filename: " + InputFilename + " PlateRa: " + PlateRa + " PlateDec: " + PlateDec + " PlateLocaltime: " + PlateLocaltime + " Airmass: " + p.Airmass + " Solvetime: " + (float)stopwatch.ElapsedMilliseconds / 1000);
 
             }
-            catch (Exception ex) { log.Debug(ex); }
+            catch (Exception ex)
+            {
+                log.Debug(ex);
+                _ = Marshal.ReleaseComObject(p);
+                return (false, 0, 0, DateTime.Now, 0, 0, 0);
 
+            }
 
 
             p.DetachFITS();
