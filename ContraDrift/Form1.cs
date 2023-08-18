@@ -598,10 +598,8 @@ namespace ContraDrift
         private void button5_Click(object sender, EventArgs e)
         {
 
-            SaveFileDialog sfd = new SaveFileDialog();
-            sfd.Filter = "Excel (*.xls)|*.xls";
-            sfd.FileName = DateTime.Now.ToString("yyyy-MM-dd HHMMss") + " - ContraDrift.xls";
-            if (sfd.ShowDialog() == DialogResult.OK)
+            string Filename = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + Path.DirectorySeparatorChar + "ContraDriftLog" + Path.DirectorySeparatorChar + DateTime.Now.ToString("yyyy -MM-dd HHMMss") + " - ContraDrift.xls";
+            if (dataGridView1.RowCount >0)
             {
 
                 Excel.Application xlApp;
@@ -627,11 +625,11 @@ namespace ContraDrift
                         xlWorkSheet.Cells[i + 2, j + 1] = cell.Value;
                     }
                 }
-                xlWorkBook.SaveAs(sfd.FileName, Excel.XlFileFormat.xlWorkbookNormal, misValue, misValue, misValue, misValue, Excel.XlSaveAsAccessMode.xlExclusive, misValue, misValue, misValue, misValue, misValue);
+                xlWorkBook.SaveAs(Filename, Excel.XlFileFormat.xlWorkbookNormal, misValue, misValue, misValue, misValue, Excel.XlSaveAsAccessMode.xlExclusive, misValue, misValue, misValue, misValue, misValue);
                 xlWorkBook.Close(true, misValue, misValue);
                 xlApp.Quit();
 
-                System.Diagnostics.Process.Start(@sfd.FileName);
+                System.Diagnostics.Process.Start(@Filename);
 
             }
         }
