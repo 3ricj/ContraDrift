@@ -625,6 +625,8 @@ namespace ContraDrift
                         xlWorkSheet.Cells[i + 2, j + 1] = cell.Value;
                     }
                 }
+                xlWorkSheet.UsedRange.Columns.AutoFit();
+
                 xlWorkBook.SaveAs(Filename, Excel.XlFileFormat.xlWorkbookNormal, misValue, misValue, misValue, misValue, Excel.XlSaveAsAccessMode.xlExclusive, misValue, misValue, misValue, misValue, misValue);
                 xlWorkBook.Close(true, misValue, misValue);
                 xlApp.Quit();
