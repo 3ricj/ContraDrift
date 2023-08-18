@@ -269,188 +269,189 @@ namespace ContraDrift
 
 
 
-            double ScopeRa, ScopeDec;
-            double ScopeRaRate, ScopeDecRate;
-            double dt_sec;
+                double ScopeRa, ScopeDec;
+                double ScopeRaRate, ScopeDecRate;
+                double dt_sec;
 
-            //Temp variables for filtered derivative RA PID
-            double new_RA_rate = 0;
-            double new_RA_rate_filtder = 0;
-            double A0_RA, A1_RA, A2_RA;
-            double A0d_RA, A1d_RA, A2d_RA, fder0_RA;
-            double tau_RA, alpha_RA, Nfilt_RA;
-            //Temp variables for filtered derivative DEC PID
-            double new_DEC_rate = 0;
-            double new_DEC_rate_filtder = 0;
-            double A0_DEC, A1_DEC, A2_DEC;
-            double A0d_DEC, A1d_DEC, A2d_DEC, fder0_DEC;
-            double tau_DEC, alpha_DEC, Nfilt_DEC;
+                //Temp variables for filtered derivative RA PID
+                double new_RA_rate = 0;
+                double new_RA_rate_filtder = 0;
+                double A0_RA, A1_RA, A2_RA;
+                double A0d_RA, A1d_RA, A2d_RA, fder0_RA;
+                double tau_RA, alpha_RA, Nfilt_RA;
+                //Temp variables for filtered derivative DEC PID
+                double new_DEC_rate = 0;
+                double new_DEC_rate_filtder = 0;
+                double A0_DEC, A1_DEC, A2_DEC;
+                double A0d_DEC, A1d_DEC, A2d_DEC, fder0_DEC;
+                double tau_DEC, alpha_DEC, Nfilt_DEC;
 
-            string InputFilename = e.FullPath;
-            log.Debug("New File: " + InputFilename);
-            (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) = SolveFits(InputFilename);
+                string InputFilename = e.FullPath;
+                log.Debug("New File: " + InputFilename);
+                (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) = SolveFits(InputFilename);
+                double PlateRaArcSec = PlateRa * 54000;
+                double PlateDecArcSec = PlateDec * 3600;
 
+                ScopeRa = telescope.RightAscension;
+                ScopeDec = telescope.Declination;
+                ScopeRaRate = telescope.RightAscensionRate / 15; //  arcsec to RA Sec per sidereal second divide by 15.  
+                ScopeDecRate = telescope.DeclinationRate;
 
-            ScopeRa = telescope.RightAscension;
-            ScopeDec = telescope.Declination;
-            ScopeRaRate = telescope.RightAscensionRate / 15; //  arcsec to RA Sec per sidereal second divide by 15.  
-            ScopeDecRate = telescope.DeclinationRate;
-
-            log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec + ",ScopeRaRate: " + ScopeRaRate + ",ScopeDecRate: " + ScopeDecRate);
+                log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec + ",ScopeRaRate: " + ScopeRaRate + ",ScopeDecRate: " + ScopeDecRate);
 
                 if (!Solved) { log.Error("Platesolved failed! ");  return;  }
 
 
-            if (FirstImage)
-            {
-                if (Solved)
+                if (FirstImage)
                 {
-                    FirstImage = false;
-                    PlateRaReference = PlateRa;
-                    PlateDecReference = PlateDec;
-                    LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
-                    log.Debug("FirstImage:  PlateRa: " + PlateRa + ",PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
-                        PID_previous_PlateRa = PlateRa;
-                        PID_previous_PlateDec = PlateDec;
+                    if (Solved)
+                    {
+                        FirstImage = false;
+                        PlateRaReference = PlateRaArcSec;
+                        PlateDecReference = PlateDecArcSec;
+                        LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
+                        log.Debug("FirstImage:  PlateRa: " + PlateRa + ",PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
+                            PID_previous_PlateRa = PlateRaArcSec;
+                            PID_previous_PlateDec = PlateDecArcSec;
+                        }
+                    }
+                else
+                {
+                    dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) * 1000;
+
+                        // PID control for RA
+                    PID_propotional_RA = (PlateRaArcSec - PID_previous_PlateRa) / (dt_sec); ;
+                    PID_integral_RA = (PlateRaArcSec - PlateRaReference) ;
+                    PID_derivative_RA = (PID_propotional_RA - PID_previous_propotional_RA) / (dt_sec);
+                    new_RA_rate = settings.PID_Setting_Kp_RA * PID_propotional_RA + settings.PID_Setting_Ki_RA * PID_integral_RA + settings.PID_Setting_Kd_RA * PID_derivative_RA;
+
+
+                    // PID control for RA with IIF filtered derivative - set up dt dependent constants
+                    A0_RA = settings.PID_Setting_Kp_RA_filter + settings.PID_Setting_Ki_RA_filter * dt_sec + settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    A1_RA = -settings.PID_Setting_Kp_RA_filter;
+                    A0d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    A1d_RA = -2.0 * settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    A2d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
+                    Nfilt_RA = settings.PID_Setting_Nfilt_RA;
+                    tau_RA = settings.PID_Setting_Kd_RA_filter / (settings.PID_Setting_Kp_RA_filter * Nfilt_RA);
+                    alpha_RA = dt_sec / (2.0 * tau_RA);
+
+                    // Perform RA PID with IIF filtered derivative
+                    PID_error_third_RA = PID_error_last_RA;
+                    PID_error_last_RA = PID_previous_propotional_RA;
+                    PID_error_new_RA = PID_propotional_RA;
+                    PID_der1_RA = PID_der0_RA;
+                    PID_der0_RA = A0d_RA * PID_error_new_RA + A1d_RA * PID_error_last_RA + A2d_RA * PID_error_third_RA;
+                    fder0_RA = (alpha_RA / (alpha_RA + 1)) * (PID_der0_RA + PID_der1_RA) - ((alpha_RA - 1) / (alpha_RA + 1)) * PID_der1_RA;
+                    new_RA_rate_filtder = A0_RA * PID_error_new_RA + A1_RA * PID_error_last_RA + fder0_RA;
+
+                    log.Debug("PID_RA:  PID_previous_propotional_RA: " + PID_previous_propotional_RA + ",PID_propotional_RA: " + PID_propotional_RA + ",PID_integral_RA: " + PID_integral_RA + ",PID_derivative_RA: " + PID_derivative_RA + ",new_RA_rate: " + new_RA_rate);
+                    log.Debug("PID_RA_settings:  PID_Setting_Kp_RA: " + settings.PID_Setting_Kp_RA + ",PID_Setting_Ki_RA: " + settings.PID_Setting_Ki_RA + ",PID_Setting_Kd_RA: " + settings.PID_Setting_Kd_RA);
+                    log.Debug("PID_RA_filter settings:  PID_Setting_Kp_RA_filter: " + settings.PID_Setting_Kp_RA_filter + ",PID_Setting_Ki_RA_filter: " + settings.PID_Setting_Ki_RA_filter + ",PID_Setting_Kd_RA_filter: " + settings.PID_Setting_Kd_RA_filter + ",PID_Setting_Nfilt_RA: " + settings.PID_Setting_Nfilt_RA);
+                    log.Debug("PID_RA_Filter:  fder0_RA: " + fder0_RA);
+
+
+
+                    // standard PID control for DEC
+                    PID_propotional_DEC = (PlateDecArcSec - PID_previous_PlateDec) / (dt_sec); ;
+                    PID_integral_DEC = (PlateDecArcSec - PlateDecReference) ;
+                    PID_derivative_DEC = (PID_propotional_DEC - PID_previous_propotional_DEC) / (dt_sec);
+                    new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
+
+
+
+                    // PID control for DEC with IIF filtered derivative - set up dt dependent constants
+                    A0_DEC = settings.PID_Setting_Kp_DEC_filter + settings.PID_Setting_Ki_DEC_filter * dt_sec + settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    A1_DEC = -settings.PID_Setting_Kp_DEC_filter;
+                    A0d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    A1d_DEC = -2.0 * settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    A2d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
+                    Nfilt_DEC = settings.PID_Setting_Nfilt_DEC;
+                    tau_DEC = settings.PID_Setting_Kd_DEC_filter / (settings.PID_Setting_Kp_DEC_filter * Nfilt_DEC);
+                    alpha_DEC = dt_sec / (2.0 * tau_DEC);
+
+                    // Perform DEC PID with IIF filtered derivative
+                    PID_error_third_DEC = PID_error_last_DEC;
+                    PID_error_last_DEC = PID_previous_propotional_DEC;
+                    PID_error_new_DEC = PID_propotional_DEC;
+                    PID_der1_DEC = PID_der0_DEC;
+                    PID_der0_DEC = A0d_DEC * PID_error_new_DEC + A1d_DEC * PID_error_last_DEC + A2d_DEC * PID_error_third_DEC;
+                    fder0_DEC = (alpha_DEC / (alpha_DEC + 1)) * (PID_der0_DEC + PID_der1_DEC) - ((alpha_DEC - 1) / (alpha_DEC + 1)) * PID_der1_DEC;
+                    new_DEC_rate_filtder = A0_DEC * PID_error_new_DEC + A1_DEC * PID_error_last_DEC + fder0_DEC;
+
+                    log.Debug("PID_DEC:  PID_previous_propotional_DEC: " + PID_previous_propotional_DEC + ",PID_propotional_DEC: " + PID_propotional_DEC + ",PID_integral_DEC: " + PID_integral_DEC + ",PID_derivative_DEC: " + PID_derivative_DEC + ",new_DEC_rate: " + new_DEC_rate);
+                    log.Debug("PID_DEC_settings:  PID_Setting_Kp_DEC: " + settings.PID_Setting_Kp_DEC + ",PID_Setting_Ki_DEC: " + settings.PID_Setting_Ki_DEC + ",PID_Setting_Kd_DEC: " + settings.PID_Setting_Kd_DEC);
+                    log.Debug("PID_DEC_filter settings:  PID_Setting_Kp_DEC_filter: " + settings.PID_Setting_Kp_DEC_filter + ",PID_Setting_Ki_DEC_filter: " + settings.PID_Setting_Ki_DEC_filter + ",PID_Setting_Kd_DEC_filter: " + settings.PID_Setting_Kd_DEC_filter + ",PID_Setting_Nfilt_DEC: " + settings.PID_Setting_Nfilt_DEC);
+                    log.Debug("PID_DEC_Filter:  fder0_DEC: " + fder0_DEC);
+
+
+                    PID_previous_3rd_propotional_RA = PID_previous_propotional_RA;
+                    PID_previous_3rd_propotional_DEC = PID_previous_propotional_DEC;
+                    PID_previous_propotional_RA = PID_propotional_RA;
+                    PID_previous_propotional_DEC = PID_propotional_DEC;
+                    PID_previous_PlateDec = PlateDecArcSec;
+                    PID_previous_PlateRa = PlateRaArcSec;
+
+                    log.Info("RA drift: " + PID_integral_RA);
+                    log.Info("DEC drift: " + PID_integral_DEC);
+
+                }
+
+                if (ProcessingFilter.Checked)
+                {
+                    new_DEC_rate = new_DEC_rate_filtder;
+                    new_RA_rate = new_RA_rate_filtder;
+                    log.Debug("Processing Filter mode enabled, override new_RA_rate to: " + new_RA_rate + " ,new_DEC_rate: " + new_DEC_rate);
+
+                }
+
+                // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
+                if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate )
+                {
+                    if (new_RA_rate < 1 && new_RA_rate > -1)
+                    {
+                        telescope.RightAscensionRate = new_RA_rate / 15;
+                            log.Debug("Setting RightAscensionRate: " + new_RA_rate);
+
+                    }
+                    else
+                    {
+                        log.Debug("Refusing to set extreme Rate of " + new_RA_rate);
+                    }
+                                            
+                    if (new_DEC_rate < 1 && new_DEC_rate > -1)
+                    {
+                        telescope.DeclinationRate = new_DEC_rate * 0.9972695677;
+                        log.Debug("Setting DeclinationRate: " + new_DEC_rate);
+                    }
+                    else
+                    {
+                        log.Debug("Refusing to set extreme dec Rate of " + new_DEC_rate);
                     }
                 }
-            else
-            {
-                dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) * 1000;
-
-                // PID control for RA
-                PID_propotional_RA = (PlateRa - PID_previous_PlateRa) * 54000;
-                PID_integral_RA = (PlateRa - PlateRaReference) * 54000;
-                PID_derivative_RA = (PID_propotional_RA - PID_previous_propotional_RA) / (dt_sec);
-                new_RA_rate = settings.PID_Setting_Kp_RA * PID_propotional_RA + settings.PID_Setting_Ki_RA * PID_integral_RA + settings.PID_Setting_Kd_RA * PID_derivative_RA;
-
-
-                // PID control for RA with IIF filtered derivative - set up dt dependent constants
-                A0_RA = settings.PID_Setting_Kp_RA_filter + settings.PID_Setting_Ki_RA_filter * dt_sec + settings.PID_Setting_Kd_RA_filter / dt_sec;
-                A1_RA = -settings.PID_Setting_Kp_RA_filter;
-                A0d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
-                A1d_RA = -2.0 * settings.PID_Setting_Kd_RA_filter / dt_sec;
-                A2d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
-                Nfilt_RA = settings.PID_Setting_Nfilt_RA;
-                tau_RA = settings.PID_Setting_Kd_RA_filter / (settings.PID_Setting_Kp_RA_filter * Nfilt_RA);
-                alpha_RA = dt_sec / (2.0 * tau_RA);
-
-                // Perform RA PID with IIF filtered derivative
-                PID_error_third_RA = PID_error_last_RA;
-                PID_error_last_RA = PID_previous_propotional_RA;
-                PID_error_new_RA = PID_propotional_RA;
-                PID_der1_RA = PID_der0_RA;
-                PID_der0_RA = A0d_RA * PID_error_new_RA + A1d_RA * PID_error_last_RA + A2d_RA * PID_error_third_RA;
-                fder0_RA = (alpha_RA / (alpha_RA + 1)) * (PID_der0_RA + PID_der1_RA) - ((alpha_RA - 1) / (alpha_RA + 1)) * PID_der1_RA;
-                new_RA_rate_filtder = A0_RA * PID_error_new_RA + A1_RA * PID_error_last_RA + fder0_RA;
-
-                log.Debug("PID_RA:  PID_previous_propotional_RA: " + PID_previous_propotional_RA + ",PID_propotional_RA: " + PID_propotional_RA + ",PID_integral_RA: " + PID_integral_RA + ",PID_derivative_RA: " + PID_derivative_RA + ",new_RA_rate: " + new_RA_rate);
-                log.Debug("PID_RA_settings:  PID_Setting_Kp_RA: " + settings.PID_Setting_Kp_RA + ",PID_Setting_Ki_RA: " + settings.PID_Setting_Ki_RA + ",PID_Setting_Kd_RA: " + settings.PID_Setting_Kd_RA);
-                log.Debug("PID_RA_filter settings:  PID_Setting_Kp_RA_filter: " + settings.PID_Setting_Kp_RA_filter + ",PID_Setting_Ki_RA_filter: " + settings.PID_Setting_Ki_RA_filter + ",PID_Setting_Kd_RA_filter: " + settings.PID_Setting_Kd_RA_filter + ",PID_Setting_Nfilt_RA: " + settings.PID_Setting_Nfilt_RA);
-                log.Debug("PID_RA_Filter:  fder0_RA: " + fder0_RA);
-
-
-
-                // standard PID control for DEC
-                PID_propotional_DEC = (PlateDec - PID_previous_PlateDec) * 3600;
-                PID_integral_DEC = (PlateDec - PlateDecReference) * 3600;
-                PID_derivative_DEC = (PID_propotional_DEC - PID_previous_propotional_DEC) / (dt_sec);
-                new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
-
-
-
-                // PID control for DEC with IIF filtered derivative - set up dt dependent constants
-                A0_DEC = settings.PID_Setting_Kp_DEC_filter + settings.PID_Setting_Ki_DEC_filter * dt_sec + settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                A1_DEC = -settings.PID_Setting_Kp_DEC_filter;
-                A0d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                A1d_DEC = -2.0 * settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                A2d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                Nfilt_DEC = settings.PID_Setting_Nfilt_DEC;
-                tau_DEC = settings.PID_Setting_Kd_DEC_filter / (settings.PID_Setting_Kp_DEC_filter * Nfilt_DEC);
-                alpha_DEC = dt_sec / (2.0 * tau_DEC);
-
-                // Perform DEC PID with IIF filtered derivative
-                PID_error_third_DEC = PID_error_last_DEC;
-                PID_error_last_DEC = PID_previous_propotional_DEC;
-                PID_error_new_DEC = PID_propotional_DEC;
-                PID_der1_DEC = PID_der0_DEC;
-                PID_der0_DEC = A0d_DEC * PID_error_new_DEC + A1d_DEC * PID_error_last_DEC + A2d_DEC * PID_error_third_DEC;
-                fder0_DEC = (alpha_DEC / (alpha_DEC + 1)) * (PID_der0_DEC + PID_der1_DEC) - ((alpha_DEC - 1) / (alpha_DEC + 1)) * PID_der1_DEC;
-                new_DEC_rate_filtder = A0_DEC * PID_error_new_DEC + A1_DEC * PID_error_last_DEC + fder0_DEC;
-
-                log.Debug("PID_DEC:  PID_previous_propotional_DEC: " + PID_previous_propotional_DEC + ",PID_propotional_DEC: " + PID_propotional_DEC + ",PID_integral_DEC: " + PID_integral_DEC + ",PID_derivative_DEC: " + PID_derivative_DEC + ",new_DEC_rate: " + new_DEC_rate);
-                log.Debug("PID_DEC_settings:  PID_Setting_Kp_DEC: " + settings.PID_Setting_Kp_DEC + ",PID_Setting_Ki_DEC: " + settings.PID_Setting_Ki_DEC + ",PID_Setting_Kd_DEC: " + settings.PID_Setting_Kd_DEC);
-                log.Debug("PID_DEC_filter settings:  PID_Setting_Kp_DEC_filter: " + settings.PID_Setting_Kp_DEC_filter + ",PID_Setting_Ki_DEC_filter: " + settings.PID_Setting_Ki_DEC_filter + ",PID_Setting_Kd_DEC_filter: " + settings.PID_Setting_Kd_DEC_filter + ",PID_Setting_Nfilt_DEC: " + settings.PID_Setting_Nfilt_DEC);
-                log.Debug("PID_DEC_Filter:  fder0_DEC: " + fder0_DEC);
-
-
-                PID_previous_3rd_propotional_RA = PID_previous_propotional_RA;
-                PID_previous_3rd_propotional_DEC = PID_previous_propotional_DEC;
-                PID_previous_propotional_RA = PID_propotional_RA;
-                PID_previous_propotional_DEC = PID_propotional_DEC;
-                PID_previous_PlateDec = PlateDec;
-                PID_previous_PlateRa = PlateRa;
-
-                log.Info("RA drift: " + PID_integral_RA);
-                log.Info("DEC drift: " + PID_integral_DEC);
-
-            }
-
-            if (ProcessingFilter.Checked)
-            {
-                new_DEC_rate = new_DEC_rate_filtder;
-                new_RA_rate = new_RA_rate_filtder;
-                log.Debug("Processing Filter mode enabled, override new_RA_rate to: " + new_RA_rate + " ,new_DEC_rate: " + new_DEC_rate);
-
-            }
-
-            // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
-            if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate )
-            {
-                if (new_RA_rate < 1 && new_RA_rate > -1)
-                {
-                    telescope.RightAscensionRate = new_RA_rate / 15;
-                        log.Debug("Setting RightAscensionRate: " + new_RA_rate);
-
-                }
                 else
                 {
-                    log.Debug("Refusing to set extreme Rate of " + new_RA_rate);
+                    log.Error("Telescope is not tracking!!! not setting tracking rates!!!"); 
                 }
-                                            
-                if (new_DEC_rate < 1 && new_DEC_rate > -1)
-                {
-                    telescope.DeclinationRate = new_DEC_rate * 0.9972695677;
-                    log.Debug("Setting DeclinationRate: " + new_DEC_rate);
-                }
-                else
-                {
-                    log.Debug("Refusing to set extreme dec Rate of " + new_DEC_rate);
-                }
-            }
-            else
-            {
-                log.Error("Telescope is not tracking!!! not setting tracking rates!!!"); 
-            }
 
-            dataGridView1.Invoke(new Action(() => { 
-                dataGridView1.Rows.Add(
-                    DateTime.Now,
-                    InputFilename,
-                    String.Format("{0:0.000000}", PlateRa),
-                    String.Format("{0:0.00}", PID_propotional_RA),
-                    String.Format("{0:0.00}", PID_integral_RA),
-                    String.Format("{0:0.0000}", new_RA_rate),
+                dataGridView1.Invoke(new Action(() => { 
+                    dataGridView1.Rows.Add(
+                        DateTime.Now,
+                        InputFilename,
+                        String.Format("{0:0.000000}", PlateRa),
+                        String.Format("{0:0.00}", PID_propotional_RA),
+                        String.Format("{0:0.00}", PID_integral_RA),
+                        String.Format("{0:0.0000}", new_RA_rate),
 
 
-                    String.Format("{0:0.000000}", PlateDec),
-                    String.Format("{0:0.00}", PID_propotional_DEC),
-                    String.Format("{0:0.00}", PID_integral_DEC),
-                    String.Format("{0:0.0000}", new_DEC_rate)
-                );
-                dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(true) -1;
-                }));
-                //dataGridView1.Invoke(new Action(() =>  { dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.SelectedRows[0].Index; }));
+                        String.Format("{0:0.000000}", PlateDec),
+                        String.Format("{0:0.00}", PID_propotional_DEC),
+                        String.Format("{0:0.00}", PID_integral_DEC),
+                        String.Format("{0:0.0000}", new_DEC_rate)
+                    );
+                    dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(true) -1;
+                    }));
+                    //dataGridView1.Invoke(new Action(() =>  { dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.SelectedRows[0].Index; }));
     
 
             }).ContinueWith(t =>
