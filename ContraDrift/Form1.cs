@@ -1,20 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ASCOM.DriverAccess;
-using ASCOM.DeviceInterface;
 using System.IO;
 using PinPoint;
 using System.Runtime.InteropServices;
 using NLog;
-using NLog.Targets;
 using NLog.Windows.Forms;
+using Excel = Microsoft.Office.Interop.Excel;
 
 
 namespace ContraDrift
@@ -79,21 +74,25 @@ namespace ContraDrift
             textBox2.Text = settings.WatchFolder;
             textBox3.Text = settings.UCAC4_path;
 
-            PID_Setting_Kp_RA_filter.Text = settings.PID_Setting_Kp_RA_filter.ToString();
-            PID_Setting_Ki_RA_filter.Text = settings.PID_Setting_Ki_RA_filter.ToString();
-            PID_Setting_Kd_RA_filter.Text = settings.PID_Setting_Kd_RA_filter.ToString();
-            PID_Setting_Nfilt_RA.Text = settings.PID_Setting_Nfilt_RA.ToString();
-            PID_Setting_Kp_DEC_filter.Text = settings.PID_Setting_Kp_DEC_filter.ToString();
-            PID_Setting_Ki_DEC_filter.Text = settings.PID_Setting_Ki_DEC_filter.ToString();
-            PID_Setting_Kd_DEC_filter.Text = settings.PID_Setting_Kd_DEC_filter.ToString();
-            PID_Setting_Nfilt_DEC.Text = settings.PID_Setting_Nfilt_DEC.ToString();
+            PID_Setting_Kp_RA_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kp_RA_filter);
+            PID_Setting_Ki_RA_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Ki_RA_filter);
+            PID_Setting_Kd_RA_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kd_RA_filter);
+            PID_Setting_Nfilt_RA.Text = String.Format("{0:0.000000}", settings.PID_Setting_Nfilt_RA);
+            PID_Setting_Kp_DEC_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kp_DEC_filter);
+            PID_Setting_Ki_DEC_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Ki_DEC_filter);
+            PID_Setting_Kd_DEC_filter.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kd_DEC_filter);
+            PID_Setting_Nfilt_DEC.Text = String.Format("{0:0.000000}", settings.PID_Setting_Nfilt_DEC);
 
-            PID_Setting_Kp_RA.Text = settings.PID_Setting_Kp_RA.ToString();
-            PID_Setting_Ki_RA.Text = settings.PID_Setting_Ki_RA.ToString();
-            PID_Setting_Kd_RA.Text = settings.PID_Setting_Kd_RA.ToString();
-            PID_Setting_Kp_DEC.Text = settings.PID_Setting_Kp_DEC.ToString();
-            PID_Setting_Ki_DEC.Text = settings.PID_Setting_Ki_DEC.ToString();
-            PID_Setting_Kd_DEC.Text = settings.PID_Setting_Kd_DEC.ToString();
+            PID_Setting_Kp_RA.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kp_RA);
+            PID_Setting_Ki_RA.Text = String.Format("{0:0.000000}", settings.PID_Setting_Ki_RA);
+            PID_Setting_Kd_RA.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kd_RA);
+            PID_Setting_Kp_DEC.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kp_DEC);
+            PID_Setting_Ki_DEC.Text = String.Format("{0:0.000000}", settings.PID_Setting_Ki_DEC);
+            PID_Setting_Kd_DEC.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kd_DEC);
+
+            RaRateLimitTextBox.Text = settings.RaRateLimitSetting.ToString();
+            DecRateLimitTextBox.Text = settings.DecRateLimitSetting.ToString(); 
+
 
             if (settings.ProcessingTraditional) { ProcessingTraditional.Checked = true; } else { ProcessingFilter.Checked = true; }
 
@@ -130,7 +129,7 @@ namespace ContraDrift
             // Apply config           
             NLog.LogManager.Configuration = config;
 
-            log.Info("Starting up");
+            log.Info("Starting up. Build: " + Convert.ToString(System.IO.File.GetLastWriteTime(System.Reflection.Assembly.GetExecutingAssembly().Location)));
 
 
         }
@@ -181,6 +180,8 @@ namespace ContraDrift
                 settings.PID_Setting_Kp_DEC = float.Parse(PID_Setting_Kp_DEC.Text);
                 settings.PID_Setting_Ki_DEC = float.Parse(PID_Setting_Ki_DEC.Text);
                 settings.PID_Setting_Kd_DEC = float.Parse(PID_Setting_Kd_DEC.Text);
+                settings.DecRateLimitSetting = float.Parse(DecRateLimitTextBox.Text);
+                settings.RaRateLimitSetting = float.Parse(RaRateLimitTextBox.Text);
                 settings.Save();
             }
             catch { log.Debug("Problems with save settings"); } // some garbage input we just toss if we can't parse it. 
@@ -209,7 +210,7 @@ namespace ContraDrift
                 telescope.Connected = false;
                 telescope.Dispose();
 
-
+                FirstImage = true;
 
             }
             else
@@ -391,9 +392,10 @@ namespace ContraDrift
                     PID_previous_propotional_DEC = PID_propotional_DEC;
                     PID_previous_PlateDec = PlateDecArcSec;
                     PID_previous_PlateRa = PlateRaArcSec;
+                    LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
 
                     log.Info("RA drift: " + PID_integral_RA);
-                    log.Info("DEC drift: " + PID_integral_DEC);
+                log.Info("DEC drift: " + PID_integral_DEC);
 
                 }
 
@@ -405,53 +407,46 @@ namespace ContraDrift
 
                 }
 
-                // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
-                if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate )
-                {
-                    if (new_RA_rate < 1 && new_RA_rate > -1)
-                    {
-                        telescope.RightAscensionRate = new_RA_rate / 15;
-                            log.Debug("Setting RightAscensionRate: " + new_RA_rate);
+            // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
+            if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate )
+            {
+                if (new_RA_rate < float.Parse(RaRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text) * -1; }
+                if (new_RA_rate > float.Parse(RaRateLimitTextBox.Text) ) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text);  }
+                telescope.RightAscensionRate = new_RA_rate / 15;
+                log.Debug("Setting RightAscensionRate: " + new_RA_rate);
+                if (new_DEC_rate < float.Parse(DecRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text) * -1; }
+                if (new_DEC_rate > float.Parse(DecRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text);  }
+                telescope.DeclinationRate = new_DEC_rate * 0.9972695677;
+                log.Debug("Setting DeclinationRate: " + new_DEC_rate);
+            }
+            else
+            {
+                log.Error("Telescope is not tracking!!! not setting tracking rates!!!");
+                FirstImage = true; // reset everything, reference image etc.  
 
-                    }
-                    else
-                    {
-                        log.Debug("Refusing to set extreme Rate of " + new_RA_rate);
-                    }
-                                            
-                    if (new_DEC_rate < 1 && new_DEC_rate > -1)
-                    {
-                        telescope.DeclinationRate = new_DEC_rate * 0.9972695677;
-                        log.Debug("Setting DeclinationRate: " + new_DEC_rate);
-                    }
-                    else
-                    {
-                        log.Debug("Refusing to set extreme dec Rate of " + new_DEC_rate);
-                    }
-                }
-                else
-                {
-                    log.Error("Telescope is not tracking!!! not setting tracking rates!!!"); 
-                }
+            }
+
 
                 dataGridView1.Invoke(new Action(() => { 
-                    dataGridView1.Rows.Add(
-                        DateTime.Now,
-                        InputFilename,
-                        String.Format("{0:0.000000}", PlateRa),
-                        String.Format("{0:0.00}", PID_propotional_RA),
-                        String.Format("{0:0.00}", PID_integral_RA),
-                        String.Format("{0:0.0000}", new_RA_rate),
+                dataGridView1.Rows.Add(
+                    DateTime.Now,
+                    InputFilename,
+                    String.Format("{0:0.000000}", PlateRa),
+                    String.Format("{0:0.000}", PID_propotional_RA),
+                    String.Format("{0:0.000}", PID_integral_RA),
+                    String.Format("{0:0.0000}", PID_derivative_RA),
+                    String.Format("{0:0.0000}", new_RA_rate),
 
 
-                        String.Format("{0:0.000000}", PlateDec),
-                        String.Format("{0:0.00}", PID_propotional_DEC),
-                        String.Format("{0:0.00}", PID_integral_DEC),
-                        String.Format("{0:0.0000}", new_DEC_rate)
-                    );
-                    dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(true) -1;
-                    }));
-                    //dataGridView1.Invoke(new Action(() =>  { dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.SelectedRows[0].Index; }));
+                    String.Format("{0:0.000000}", PlateDec),
+                    String.Format("{0:0.000}", PID_propotional_DEC),
+                    String.Format("{0:0.000}", PID_integral_DEC),
+                    String.Format("{0:0.0000}", PID_derivative_DEC),
+                    String.Format("{0:0.0000}", new_DEC_rate)
+                );
+                dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(false) -1;
+                }));
+                //dataGridView1.Invoke(new Action(() =>  { dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.SelectedRows[0].Index; }));
     
 
             }).ContinueWith(t =>
@@ -547,7 +542,7 @@ namespace ContraDrift
             {
                 SaveFileDialog sfd = new SaveFileDialog();
                 sfd.Filter = "CSV (*.csv)|*.csv";
-                sfd.FileName = "Output.csv";
+                sfd.FileName = DateTime.Now.ToString("yyyy-MM-dd HHMMss") + " - ContraDrift.csv";
                 bool fileError = false;
                 if (sfd.ShowDialog() == DialogResult.OK)
                 {
@@ -597,6 +592,47 @@ namespace ContraDrift
             else
             {
                 MessageBox.Show("No Record To Export !!!", "Info");
+            }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "Excel (*.xls)|*.xls";
+            sfd.FileName = DateTime.Now.ToString("yyyy-MM-dd HHMMss") + " - ContraDrift.xls";
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+
+                Excel.Application xlApp;
+                Excel.Workbook xlWorkBook;
+                Excel.Worksheet xlWorkSheet;
+                object misValue = System.Reflection.Missing.Value;
+                xlApp = new Excel.Application();
+                xlWorkBook = xlApp.Workbooks.Add(misValue);
+                xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
+                int i = 0;
+                int j = 0;
+
+                for (j = 0; j <= dataGridView1.ColumnCount - 1; j++)
+                {
+                    xlWorkSheet.Cells[1, j + 1] = dataGridView1.Columns[j].HeaderText.ToString();
+                }
+
+                for (i = 0; i <= dataGridView1.RowCount - 1; i++)
+                {
+                    for (j = 0; j <= dataGridView1.ColumnCount - 1; j++)
+                    {
+                        DataGridViewCell cell = dataGridView1[j, i];
+                        xlWorkSheet.Cells[i + 2, j + 1] = cell.Value;
+                    }
+                }
+                xlWorkBook.SaveAs(sfd.FileName, Excel.XlFileFormat.xlWorkbookNormal, misValue, misValue, misValue, misValue, Excel.XlSaveAsAccessMode.xlExclusive, misValue, misValue, misValue, misValue, misValue);
+                xlWorkBook.Close(true, misValue, misValue);
+                xlApp.Quit();
+
+                System.Diagnostics.Process.Start(@sfd.FileName);
+
             }
         }
     }
