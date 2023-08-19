@@ -38,6 +38,8 @@ namespace ContraDrift
             this.button1 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.label21 = new System.Windows.Forms.Label();
+            this.BufferFitsCount = new System.Windows.Forms.TextBox();
             this.label11 = new System.Windows.Forms.Label();
             this.DecRateLimitTextBox = new System.Windows.Forms.TextBox();
             this.label12 = new System.Windows.Forms.Label();
@@ -83,10 +85,9 @@ namespace ContraDrift
             this.button4 = new System.Windows.Forms.Button();
             this.folderBrowserDialog2 = new System.Windows.Forms.FolderBrowserDialog();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.Export = new System.Windows.Forms.Button();
-            this.button5 = new System.Windows.Forms.Button();
             this.Timestamp = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Filename = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dt_time = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.PlateRa = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.RaP = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.RaI = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -97,6 +98,8 @@ namespace ContraDrift
             this.DecI = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.DecD = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.NewDecRate = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Export = new System.Windows.Forms.Button();
+            this.button5 = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -173,6 +176,8 @@ namespace ContraDrift
             // 
             // groupBox3
             // 
+            this.groupBox3.Controls.Add(this.label21);
+            this.groupBox3.Controls.Add(this.BufferFitsCount);
             this.groupBox3.Controls.Add(this.label11);
             this.groupBox3.Controls.Add(this.DecRateLimitTextBox);
             this.groupBox3.Controls.Add(this.label12);
@@ -219,6 +224,23 @@ namespace ContraDrift
             this.groupBox3.TabIndex = 6;
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "PID";
+            // 
+            // label21
+            // 
+            this.label21.AutoSize = true;
+            this.label21.Location = new System.Drawing.Point(16, 12);
+            this.label21.Name = "label21";
+            this.label21.Size = new System.Drawing.Size(85, 13);
+            this.label21.TabIndex = 41;
+            this.label21.Text = "BufferFitsCount=";
+            // 
+            // BufferFitsCount
+            // 
+            this.BufferFitsCount.Location = new System.Drawing.Point(107, 9);
+            this.BufferFitsCount.MaxLength = 10;
+            this.BufferFitsCount.Name = "BufferFitsCount";
+            this.BufferFitsCount.Size = new System.Drawing.Size(85, 20);
+            this.BufferFitsCount.TabIndex = 40;
             // 
             // label11
             // 
@@ -605,6 +627,7 @@ namespace ContraDrift
             this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.Timestamp,
             this.Filename,
+            this.dt_time,
             this.PlateRa,
             this.RaP,
             this.RaI,
@@ -621,26 +644,6 @@ namespace ContraDrift
             this.dataGridView1.RowHeadersWidth = 82;
             this.dataGridView1.Size = new System.Drawing.Size(1058, 254);
             this.dataGridView1.TabIndex = 8;
-            // 
-            // Export
-            // 
-            this.Export.Location = new System.Drawing.Point(1006, 446);
-            this.Export.Name = "Export";
-            this.Export.Size = new System.Drawing.Size(75, 23);
-            this.Export.TabIndex = 9;
-            this.Export.Text = "CSV";
-            this.Export.UseVisualStyleBackColor = true;
-            this.Export.Click += new System.EventHandler(this.Export_Click);
-            // 
-            // button5
-            // 
-            this.button5.Location = new System.Drawing.Point(919, 446);
-            this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(75, 23);
-            this.button5.TabIndex = 10;
-            this.button5.Text = "Excel";
-            this.button5.UseVisualStyleBackColor = true;
-            this.button5.Click += new System.EventHandler(this.button5_Click);
             // 
             // Timestamp
             // 
@@ -659,6 +662,14 @@ namespace ContraDrift
             this.Filename.Name = "Filename";
             this.Filename.ReadOnly = true;
             this.Filename.Width = 74;
+            // 
+            // dt_time
+            // 
+            this.dt_time.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.dt_time.HeaderText = "dt_sec";
+            this.dt_time.Name = "dt_time";
+            this.dt_time.ReadOnly = true;
+            this.dt_time.Width = 64;
             // 
             // PlateRa
             // 
@@ -749,6 +760,26 @@ namespace ContraDrift
             this.NewDecRate.Name = "NewDecRate";
             this.NewDecRate.ReadOnly = true;
             this.NewDecRate.Width = 97;
+            // 
+            // Export
+            // 
+            this.Export.Location = new System.Drawing.Point(1006, 446);
+            this.Export.Name = "Export";
+            this.Export.Size = new System.Drawing.Size(75, 23);
+            this.Export.TabIndex = 9;
+            this.Export.Text = "CSV";
+            this.Export.UseVisualStyleBackColor = true;
+            this.Export.Click += new System.EventHandler(this.Export_Click);
+            // 
+            // button5
+            // 
+            this.button5.Location = new System.Drawing.Point(919, 446);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(75, 23);
+            this.button5.TabIndex = 10;
+            this.button5.Text = "Excel";
+            this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
             // 
             // Form1
             // 
@@ -841,6 +872,7 @@ namespace ContraDrift
         private System.Windows.Forms.Button button5;
         private System.Windows.Forms.DataGridViewTextBoxColumn Timestamp;
         private System.Windows.Forms.DataGridViewTextBoxColumn Filename;
+        private System.Windows.Forms.DataGridViewTextBoxColumn dt_time;
         private System.Windows.Forms.DataGridViewTextBoxColumn PlateRa;
         private System.Windows.Forms.DataGridViewTextBoxColumn RaP;
         private System.Windows.Forms.DataGridViewTextBoxColumn RaI;
@@ -851,6 +883,8 @@ namespace ContraDrift
         private System.Windows.Forms.DataGridViewTextBoxColumn DecI;
         private System.Windows.Forms.DataGridViewTextBoxColumn DecD;
         private System.Windows.Forms.DataGridViewTextBoxColumn NewDecRate;
+        private System.Windows.Forms.Label label21;
+        private System.Windows.Forms.TextBox BufferFitsCount;
     }
 }
 

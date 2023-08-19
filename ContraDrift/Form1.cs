@@ -22,6 +22,7 @@ namespace ContraDrift
         BackgroundWorker worker = new BackgroundWorker();
         FileSystemWatcher watcher = new FileSystemWatcher();
         TaskFactory tFactory = new TaskFactory();
+        public FrameList frames = new FrameList(4);
         private Telescope telescope;
         private bool FirstImage = true;
 
@@ -57,8 +58,11 @@ namespace ContraDrift
         private double PlateDecReference;
         private double PID_previous_PlateRa; 
         private double PID_previous_PlateDec;
+        private double dt_sec;
 
-        private DateTime LastExposureTime;
+        private DateTime LastExposureCenter;
+        
+
 
 
 
@@ -91,7 +95,9 @@ namespace ContraDrift
             PID_Setting_Kd_DEC.Text = String.Format("{0:0.000000}", settings.PID_Setting_Kd_DEC);
 
             RaRateLimitTextBox.Text = settings.RaRateLimitSetting.ToString();
-            DecRateLimitTextBox.Text = settings.DecRateLimitSetting.ToString(); 
+            DecRateLimitTextBox.Text = settings.DecRateLimitSetting.ToString();
+            BufferFitsCount.Text = settings.BufferFitsCount.ToString(); 
+            frames.SetMaxBufferCount(settings.BufferFitsCount);
 
 
             if (settings.ProcessingTraditional) { ProcessingTraditional.Checked = true; } else { ProcessingFilter.Checked = true; }
@@ -182,6 +188,9 @@ namespace ContraDrift
                 settings.PID_Setting_Kd_DEC = float.Parse(PID_Setting_Kd_DEC.Text);
                 settings.DecRateLimitSetting = float.Parse(DecRateLimitTextBox.Text);
                 settings.RaRateLimitSetting = float.Parse(RaRateLimitTextBox.Text);
+                settings.BufferFitsCount = int.Parse(BufferFitsCount.Text);
+                frames.SetMaxBufferCount(int.Parse(BufferFitsCount.Text));
+
                 settings.Save();
             }
             catch { log.Debug("Problems with save settings"); } // some garbage input we just toss if we can't parse it. 
@@ -270,61 +279,74 @@ namespace ContraDrift
 
 
 
-                double ScopeRa, ScopeDec;
-                double ScopeRaRate, ScopeDecRate;
-                double dt_sec;
+            double ScopeRa, ScopeDec;
+            double ScopeRaRate, ScopeDecRate;
 
-                //Temp variables for filtered derivative RA PID
-                double new_RA_rate = 0;
-                double new_RA_rate_filtder = 0;
-                double A0_RA, A1_RA, A2_RA;
-                double A0d_RA, A1d_RA, A2d_RA, fder0_RA;
-                double tau_RA, alpha_RA, Nfilt_RA;
-                //Temp variables for filtered derivative DEC PID
-                double new_DEC_rate = 0;
-                double new_DEC_rate_filtder = 0;
-                double A0_DEC, A1_DEC, A2_DEC;
-                double A0d_DEC, A1d_DEC, A2d_DEC, fder0_DEC;
-                double tau_DEC, alpha_DEC, Nfilt_DEC;
+            //Temp variables for filtered derivative RA PID
+            double new_RA_rate = 0;
+            double new_RA_rate_filtder = 0;
+            double A0_RA, A1_RA, A2_RA;
+            double A0d_RA, A1d_RA, A2d_RA, fder0_RA;
+            double tau_RA, alpha_RA, Nfilt_RA;
+            //Temp variables for filtered derivative DEC PID
+            double new_DEC_rate = 0;
+            double new_DEC_rate_filtder = 0;
+            double A0_DEC, A1_DEC, A2_DEC;
+            double A0d_DEC, A1d_DEC, A2d_DEC, fder0_DEC;
+            double tau_DEC, alpha_DEC, Nfilt_DEC;
+            DateTime ExposureCenter;
 
-                string InputFilename = e.FullPath;
-                log.Debug("New File: " + InputFilename);
-                (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) = SolveFits(InputFilename);
-
-
-                double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
-                double PlateDecArcSec = PlateDec * 3600; // convert from degrees to arcsec
-
-                ScopeRa = telescope.RightAscension;
-                ScopeDec = telescope.Declination;
-                ScopeRaRate = telescope.RightAscensionRate / 15; //  arcsec to RA Sec per sidereal second divide by 15.  
-                ScopeDecRate = telescope.DeclinationRate;
-
-                log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec + ",ScopeRaRate: " + ScopeRaRate + ",ScopeDecRate: " + ScopeDecRate);
-
-                if (!Solved) { log.Error("Platesolved failed! ");  return;  }
+            string InputFilename = e.FullPath;
+            log.Debug("New File: " + InputFilename);
+            (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) = SolveFits(InputFilename);
 
 
-                if (FirstImage)
+            double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
+            double PlateDecArcSec = PlateDec * 3600; // convert from degrees to arcsec
+            
+
+            ScopeRa = telescope.RightAscension;
+            ScopeDec = telescope.Declination;
+            ScopeRaRate = telescope.RightAscensionRate / 15; //  arcsec to RA Sec per sidereal second divide by 15.  
+            ScopeDecRate = telescope.DeclinationRate;
+
+            log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec + ",ScopeRaRate: " + ScopeRaRate + ",ScopeDecRate: " + ScopeDecRate);
+
+            if (!Solved) { log.Error("Platesolved failed! "); return; }
+
+            frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
+
+
+            (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
+
+            if (FirstImage)
+            {
+                if (Solved)
                 {
-                    if (Solved)
-                    {
-                        FirstImage = false;
-                        PlateRaReference = PlateRaArcSec;
-                        PlateDecReference = PlateDecArcSec;
-                        LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
-                        log.Debug("FirstImage:  PlateRa: " + PlateRa + ",PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
-                            PID_previous_PlateRa = PlateRaArcSec;
-                            PID_previous_PlateDec = PlateDecArcSec;
-                            PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
-                    }
-
+                    FirstImage = false;
+                    PlateRaReference = PlateRaArcSec;
+                    PlateDecReference = PlateDecArcSec;
+                    LastExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
+                    log.Debug("FirstImage:  LastExposureCenter: " + LastExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
+                    PID_previous_PlateRa = PlateRaArcSec;
+                    PID_previous_PlateDec = PlateDecArcSec;
+                    PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
                 }
-                else
-                {
-                    dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
 
-                        // PID control for RA
+            }
+            else
+            {
+                //dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
+
+                    ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
+                    log.Debug("ExposureCenter: " + ExposureCenter);
+                    log.Debug("LastExposureCenter: " + LastExposureCenter);
+                    dt_sec = ((ExposureCenter - LastExposureCenter).TotalMilliseconds) / 1000;
+                    log.Debug("dt_sec: " + dt_sec);
+
+                    // dt_sec = (GetPlateCollectionLocalExposureTimeCenter() - LastExposureTime).TotalMilliseconds) / 1000;
+
+                    // PID control for RA
                     PID_propotional_RA = (PlateRaArcSec - PID_previous_PlateRa) / (dt_sec); ;
                     PID_integral_RA = (PlateRaArcSec - PlateRaReference) ;
                     PID_derivative_RA = (PID_propotional_RA - PID_previous_propotional_RA) / (dt_sec);
@@ -396,7 +418,10 @@ namespace ContraDrift
                     PID_previous_propotional_DEC = PID_propotional_DEC;
                     PID_previous_PlateDec = PlateDecArcSec;
                     PID_previous_PlateRa = PlateRaArcSec;
-                    LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
+                    LastExposureCenter = ExposureCenter;
+
+                    //LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
+                    
 
                     log.Info("RA drift: " + PID_integral_RA);
                     log.Info("DEC drift: " + PID_integral_DEC);
@@ -435,6 +460,7 @@ namespace ContraDrift
                 dataGridView1.Rows.Add(
                     DateTime.Now,
                     InputFilename,
+                    String.Format("{0:0.0}", dt_sec),
                     String.Format("{0:0.000000}", PlateRa),
                     String.Format("{0:0.00000}", PID_propotional_RA),
                     String.Format("{0:0.00000}", PID_integral_RA),
@@ -641,8 +667,10 @@ namespace ContraDrift
 
             }
         }
+      
+
     }
-        
+
 }
     
 
