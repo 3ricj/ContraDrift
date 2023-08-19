@@ -26,6 +26,7 @@ namespace ContraDrift
         private Telescope telescope;
         private bool FirstImage = true;
 
+
         private double PID_previous_3rd_propotional_RA = 0;
         private double PID_previous_propotional_RA = 0;
         // state variables for standard PID loop for RA
@@ -303,7 +304,8 @@ namespace ContraDrift
 
             double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
             double PlateDecArcSec = PlateDec * 3600; // convert from degrees to arcsec
-            
+            double PlateDecArcSecOld, PlateRaArcSecOld;
+
 
             ScopeRa = telescope.RightAscension;
             ScopeDec = telescope.Declination;
@@ -316,8 +318,9 @@ namespace ContraDrift
 
             frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
 
+            if (!frames.IsBufferFull()) { log.Debug("Buffer not full.. "); return; }
 
-            (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
+            (PlateRaArcSecOld, PlateDecArcSecOld, PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
 
             if (FirstImage)
             {
@@ -326,7 +329,7 @@ namespace ContraDrift
                     FirstImage = false;
                     PlateRaReference = PlateRaArcSec;
                     PlateDecReference = PlateDecArcSec;
-                    LastExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
+                    (LastExposureCenter, ExposureCenter )= frames.GetPlateCollectionLocalExposureTimeCenter();
                     log.Debug("FirstImage:  LastExposureCenter: " + LastExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
                     PID_previous_PlateRa = PlateRaArcSec;
                     PID_previous_PlateDec = PlateDecArcSec;
@@ -336,9 +339,9 @@ namespace ContraDrift
             }
             else
             {
-                //dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
+                    //dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
 
-                    ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
+                    (LastExposureCenter, ExposureCenter) = frames.GetPlateCollectionLocalExposureTimeCenter();
                     log.Debug("ExposureCenter: " + ExposureCenter);
                     log.Debug("LastExposureCenter: " + LastExposureCenter);
                     dt_sec = ((ExposureCenter - LastExposureCenter).TotalMilliseconds) / 1000;
