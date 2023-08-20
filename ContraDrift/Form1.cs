@@ -420,12 +420,12 @@ namespace ContraDrift
                 log.Debug("Setting RightAscensionRate: " + new_RA_rate);
                 if (new_DEC_rate < float.Parse(DecRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text) * -1; }
                 if (new_DEC_rate > float.Parse(DecRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text);  }
-                telescope.DeclinationRate = new_DEC_rate * 0.9972695677;
+                telescope.DeclinationRate = new_DEC_rate / 0.9972695677;
                 log.Debug("Setting DeclinationRate: " + new_DEC_rate);
             }
             else
             {
-                log.Error("Telescope is not tracking!!! not setting tracking rates!!!");
+                log.Error("Telescope is not tracking!!! not setting tracking rates!!! Resetting everything.");
                 FirstImage = true; // reset everything, reference image etc.  
 
             }
