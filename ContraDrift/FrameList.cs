@@ -81,9 +81,9 @@ namespace ContraDrift
 
             double OldWindowHalfSpan = (framelist.ElementAt(PlateCollectionMax).EndTime() -  framelist.First.Value.StartTime).TotalSeconds / 2;
         
-            double HalfSpan = (framelist.Last.Value.EndTime() - framelist.ElementAt(PlateCollectionMax+1).StartTime).TotalSeconds / 2;
+            double HalfSpan = (framelist.Last.Value.EndTime() - framelist.ElementAt(PlateCollectionMax).StartTime).TotalSeconds / 2;
             return (framelist.First.Value.StartTime.AddSeconds(OldWindowHalfSpan), 
-                framelist.ElementAt(PlateCollectionMax+1).StartTime.AddSeconds(HalfSpan));
+                framelist.ElementAt(PlateCollectionMax).StartTime.AddSeconds(HalfSpan));
             
             //return DateTime.Now;
 

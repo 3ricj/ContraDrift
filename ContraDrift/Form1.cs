@@ -57,8 +57,12 @@ namespace ContraDrift
 
         private double PlateRaReference;
         private double PlateDecReference;
-        private double PID_previous_PlateRa; 
-        private double PID_previous_PlateDec;
+        private double PlateRaPrevious = -1;
+        private double PlateDecPrevious = -1;
+
+
+        private double PID_previous_PlateRa;   //averaged
+        private double PID_previous_PlateDec; // averaged
         private double dt_sec;
 
         private DateTime LastExposureCenter;
@@ -299,7 +303,7 @@ namespace ContraDrift
 
             string InputFilename = e.FullPath;
             log.Debug("New File: " + InputFilename);
-            (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) = SolveFits(InputFilename);
+            (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
 
 
             double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
@@ -423,8 +427,12 @@ namespace ContraDrift
                     PID_previous_PlateRa = PlateRaArcSec;
                     LastExposureCenter = ExposureCenter;
 
+                    PlateRaPrevious = PlateRa;
+                    PlateDecPrevious = PlateDec;
+
+
                     //LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
-                    
+
 
                     log.Info("RA drift: " + PID_integral_RA);
                     log.Info("DEC drift: " + PID_integral_DEC);
@@ -477,7 +485,7 @@ namespace ContraDrift
                     String.Format("{0:0.00000}", PID_derivative_DEC),
                     String.Format("{0:0.0000}", new_DEC_rate)
                 );
-                dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(false) -1;
+                    dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.RowCount - 1; 
                 }));
                 //dataGridView1.Invoke(new Action(() =>  { dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.SelectedRows[0].Index; }));
     
@@ -501,7 +509,7 @@ namespace ContraDrift
             save_settings();
         }
 
-        public (bool, double, double, DateTime, double, double, float) SolveFits(string InputFilename)
+        public (bool, double, double, DateTime, double, double, float) SolveFits(string InputFilename, double LastPlateRa = -1, double LastPlateDec = -1)
         {
 
             double PlateRa = 0, PlateDec = 0, PlateExposureTime = 0;
@@ -517,10 +525,12 @@ namespace ContraDrift
                 p.AttachFITS(InputFilename);
                 p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
                 p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
-                p.RightAscension = p.TargetRightAscension;
-                p.Declination = p.TargetDeclination;
+                if (LastPlateRa == -1) { p.RightAscension = p.TargetRightAscension; } else { p.RightAscension = LastPlateRa;  }
+                if (LastPlateDec == -1) { p.Declination = p.TargetDeclination; } else { p.Declination = LastPlateDec; }
+
                 p.Catalog = (CatalogType)11;
                 p.CatalogPath = settings.UCAC4_path;
+                p.CatalogExpansion = 0.4;
                 p.Solve();
                 PlateRa = p.RightAscension; // in hours
                 PlateDec = p.Declination;  // in degrees
