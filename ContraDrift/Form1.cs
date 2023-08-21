@@ -22,7 +22,9 @@ namespace ContraDrift
         BackgroundWorker worker = new BackgroundWorker();
         FileSystemWatcher watcher = new FileSystemWatcher();
         TaskFactory tFactory = new TaskFactory();
-        public FrameList frames = new FrameList(4);
+        public FrameList frames;
+        public FrameList framesOld;
+
         private Telescope telescope;
         private bool FirstImage = true;
 
@@ -66,7 +68,7 @@ namespace ContraDrift
         private double dt_sec;
 
         private DateTime LastExposureCenter;
-        
+        private string PendingMessage; 
 
 
 
@@ -101,9 +103,7 @@ namespace ContraDrift
 
             RaRateLimitTextBox.Text = settings.RaRateLimitSetting.ToString();
             DecRateLimitTextBox.Text = settings.DecRateLimitSetting.ToString();
-            BufferFitsCount.Text = settings.BufferFitsCount.ToString(); 
-            frames.SetMaxBufferCount(settings.BufferFitsCount);
-
+            BufferFitsCount.Text = settings.BufferFitsCount.ToString();
 
             if (settings.ProcessingTraditional) { ProcessingTraditional.Checked = true; } else { ProcessingFilter.Checked = true; }
 
@@ -141,11 +141,12 @@ namespace ContraDrift
             NLog.LogManager.Configuration = config;
 
             log.Info("Starting up. Build: " + Convert.ToString(System.IO.File.GetLastWriteTime(System.Reflection.Assembly.GetExecutingAssembly().Location)));
+            AddMessage("Build:" + Convert.ToString(System.IO.File.GetLastWriteTime(System.Reflection.Assembly.GetExecutingAssembly().Location)) + ",");
 
 
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void SelectTelescopeButton_Click(object sender, EventArgs e)
         {
             //ASCOM.Utilities.Chooser chsr = new ASCOM.Utilities.Chooser();
             //chsr.DeviceType = "Telescope";
@@ -162,7 +163,7 @@ namespace ContraDrift
 
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private void WatchFolderBrowseButton_Click(object sender, EventArgs e)
         {
             folderBrowserDialog1.ShowDialog();
             textBox2.Text = folderBrowserDialog1.SelectedPath;
@@ -191,30 +192,43 @@ namespace ContraDrift
                 settings.PID_Setting_Kp_DEC = float.Parse(PID_Setting_Kp_DEC.Text);
                 settings.PID_Setting_Ki_DEC = float.Parse(PID_Setting_Ki_DEC.Text);
                 settings.PID_Setting_Kd_DEC = float.Parse(PID_Setting_Kd_DEC.Text);
-                settings.DecRateLimitSetting = float.Parse(DecRateLimitTextBox.Text);
                 settings.RaRateLimitSetting = float.Parse(RaRateLimitTextBox.Text);
+                settings.DecRateLimitSetting = float.Parse(DecRateLimitTextBox.Text);
                 settings.BufferFitsCount = int.Parse(BufferFitsCount.Text);
-                frames.SetMaxBufferCount(int.Parse(BufferFitsCount.Text));
 
                 settings.Save();
             }
             catch { log.Debug("Problems with save settings"); } // some garbage input we just toss if we can't parse it. 
+
+            AddMessage("BufferFitsCount:" + BufferFitsCount.Text + ",");
+            AddMessage("RaRateLimit:" + RaRateLimitTextBox.Text + ",");
+
+            AddMessage("PID_Setting_Kp_RA:" + PID_Setting_Kp_RA.Text + ",");
+            AddMessage("PID_Setting_Ki_RA:" + PID_Setting_Ki_RA.Text + ",");
+            AddMessage("PID_Setting_Kd_RA:" + PID_Setting_Kd_RA.Text + ",");
+
+            AddMessage("DecRateLimit:" + DecRateLimitTextBox.Text + ",");
+            AddMessage("PID_Setting_Kp_DEC:" + PID_Setting_Kp_DEC.Text + ",");
+            AddMessage("PID_Setting_Ki_DEC:" + PID_Setting_Ki_DEC.Text + ",");
+            AddMessage("PID_Setting_Kd_DEC:" + PID_Setting_Kd_DEC.Text + ",");
+
 
             if (ProcessingTraditional.Checked) { settings.ProcessingTraditional = true; } else { settings.ProcessingTraditional = false; }
             log.Debug("Settings saved..");
         }
 
 
-        private void button3_Click(object sender, EventArgs e)
+        private void StartStopButton_Click(object sender, EventArgs e)
         {
             if (settings.Status == "Running")
             {
                 // stop
                 log.Info("Stopping");
                 settings.Status = "Stopped";
-                button3.Text = "Start";
-                button1.Enabled = true;
-                button2.Enabled = true;
+                StartStopButton.Text = "Start";
+                SelectTelescopeButton.Enabled = true;
+                WatchFolderBrowseButton.Enabled = true;
+                BufferFitsCount.Enabled = true;
 
                 watcher.EnableRaisingEvents = false;
                 //watcher.Dispose();
@@ -225,22 +239,23 @@ namespace ContraDrift
                 telescope.Dispose();
 
                 FirstImage = true;
-
             }
             else
             {
                 // start
                 log.Info("Starting");
                 settings.Status = "Running";
-                button3.Text = "Stop";
-                button1.Enabled = false;
-                button2.Enabled = false;
+                StartStopButton.Text = "Stop";
+                SelectTelescopeButton.Enabled = false;
+                WatchFolderBrowseButton.Enabled = false;
+                BufferFitsCount.Enabled = false;
 
                 telescope = new Telescope(settings.TelescopeProgId);
                 telescope.Connected = true;
                 telescope.Tracking = true;
-                //telescope.SlewToCoordinatesAsync(20.7333995798772, 45.3667092514744); //a blocking call for testing; 
-                
+
+                framesOld = new FrameList(settings.BufferFitsCount);
+                frames = new FrameList(settings.BufferFitsCount, framesOld);
 
                 save_settings();
 
@@ -321,10 +336,7 @@ namespace ContraDrift
             if (!Solved) { log.Error("Platesolved failed! "); return; }
 
             frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
-
-            if (!frames.IsBufferFull()) { log.Debug("Buffer not full.. "); return; }
-
-            (PlateRaArcSecOld, PlateDecArcSecOld, PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
+            (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
 
             if (FirstImage)
             {
@@ -333,8 +345,9 @@ namespace ContraDrift
                     FirstImage = false;
                     PlateRaReference = PlateRaArcSec;
                     PlateDecReference = PlateDecArcSec;
-                    (LastExposureCenter, ExposureCenter )= frames.GetPlateCollectionLocalExposureTimeCenter();
-                    log.Debug("FirstImage:  LastExposureCenter: " + LastExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
+//                    (LastExposureCenter, 
+                    ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
+                    log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
                     PID_previous_PlateRa = PlateRaArcSec;
                     PID_previous_PlateDec = PlateDecArcSec;
                     PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
@@ -343,9 +356,12 @@ namespace ContraDrift
             }
             else
             {
+                    if (!framesOld.IsBufferFull()) { log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2); return; }
                     //dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
+                    (PlateRaArcSecOld, PlateDecArcSecOld) = framesOld.GetPlateCollectionAverage();
+                    LastExposureCenter = framesOld.GetPlateCollectionLocalExposureTimeCenter();
+                    ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
 
-                    (LastExposureCenter, ExposureCenter) = frames.GetPlateCollectionLocalExposureTimeCenter();
                     log.Debug("ExposureCenter: " + ExposureCenter);
                     log.Debug("LastExposureCenter: " + LastExposureCenter);
                     dt_sec = ((ExposureCenter - LastExposureCenter).TotalMilliseconds) / 1000;
@@ -483,10 +499,13 @@ namespace ContraDrift
                     String.Format("{0:0.00000}", PID_propotional_DEC),
                     String.Format("{0:0.00000}", PID_integral_DEC),
                     String.Format("{0:0.00000}", PID_derivative_DEC),
-                    String.Format("{0:0.0000}", new_DEC_rate)
+                    String.Format("{0:0.0000}", new_DEC_rate),
+                    PendingMessage
                 );
                     dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.RowCount - 1; 
                 }));
+
+                PendingMessage = "";
                 //dataGridView1.Invoke(new Action(() =>  { dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.SelectedRows[0].Index; }));
     
 
@@ -679,6 +698,10 @@ namespace ContraDrift
                 System.Diagnostics.Process.Start(@Filename);
 
             }
+        }
+        private void AddMessage(string incomingMsg)
+        {
+            PendingMessage = PendingMessage + incomingMsg;
         }
       
 
