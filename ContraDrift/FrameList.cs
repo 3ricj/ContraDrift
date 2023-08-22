@@ -75,8 +75,8 @@ namespace ContraDrift
                 WindowIndex++;
             }
             return (
-                CollectionRaSumRecentWindow / PlateCollectionMax,
-                CollectionDecSumRecentWindow / PlateCollectionMax
+                CollectionRaSumRecentWindow / framelist.Count,
+                CollectionDecSumRecentWindow / framelist.Count
                 );
         }
 

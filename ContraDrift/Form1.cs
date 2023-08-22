@@ -337,28 +337,25 @@ namespace ContraDrift
 
             frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
             (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
+            if (!framesOld.IsBufferFull()) { log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2); return; }
 
-            if (FirstImage)
+                if (FirstImage)
             {
                 if (Solved)
                 {
                     FirstImage = false;
                     PlateRaReference = PlateRaArcSec;
                     PlateDecReference = PlateDecArcSec;
-//                    (LastExposureCenter, 
                     ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
                     log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
                     PID_previous_PlateRa = PlateRaArcSec;
                     PID_previous_PlateDec = PlateDecArcSec;
                     PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
-                    PID_propotional_DEC = 0; PID_integral_DEC = 0; PID_derivative_DEC = 0; PID_previous_propotional_DEC = 0;
-
-                    }
-
                 }
+
+            }
             else
             {
-                    if (!framesOld.IsBufferFull()) { log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2); return; }
                     //dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
                     (PlateRaArcSecOld, PlateDecArcSecOld) = framesOld.GetPlateCollectionAverage();
                     LastExposureCenter = framesOld.GetPlateCollectionLocalExposureTimeCenter();
@@ -491,20 +488,20 @@ namespace ContraDrift
                     InputFilename,
                     String.Format("{0:0.0}", dt_sec),
                     String.Format("{0:0.000000}", PlateRa),
-                    String.Format("{0:0.00000}", PID_propotional_RA * dt_sec),
+                    String.Format("{0:0.00000}", PID_propotional_RA),
                     String.Format("{0:0.00000}", PID_integral_RA),
                     String.Format("{0:0.00000}", PID_derivative_RA),
                     String.Format("{0:0.0000}", new_RA_rate),
 
 
                     String.Format("{0:0.000000}", PlateDec),
-                    String.Format("{0:0.00000}", PID_propotional_DEC * dt_sec),
+                    String.Format("{0:0.00000}", PID_propotional_DEC),
                     String.Format("{0:0.00000}", PID_integral_DEC),
                     String.Format("{0:0.00000}", PID_derivative_DEC),
                     String.Format("{0:0.0000}", new_DEC_rate),
                     PendingMessage
                 );
-                dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(false) -1;
+                    dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.RowCount - 1; 
                 }));
 
                 PendingMessage = "";
@@ -705,15 +702,8 @@ namespace ContraDrift
         {
             PendingMessage = PendingMessage + incomingMsg;
         }
+      
 
-        private void button6_Click(object sender, EventArgs e)
-        {
-            log.Debug("PID reset!");
-            PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
-            PID_propotional_DEC = 0; PID_integral_DEC = 0; PID_derivative_DEC = 0; PID_previous_propotional_DEC = 0;
-            FirstImage = true; 
-
-        }
     }
 
 }
