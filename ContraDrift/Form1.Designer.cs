@@ -32,11 +32,11 @@ namespace ContraDrift
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.textBox2 = new System.Windows.Forms.TextBox();
-            this.button2 = new System.Windows.Forms.Button();
+            this.WatchFolderBrowseButton = new System.Windows.Forms.Button();
             this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
-            this.button1 = new System.Windows.Forms.Button();
-            this.button3 = new System.Windows.Forms.Button();
+            this.SelectTelescopeButton = new System.Windows.Forms.Button();
+            this.StartStopButton = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.label21 = new System.Windows.Forms.Label();
             this.BufferFitsCount = new System.Windows.Forms.TextBox();
@@ -82,9 +82,11 @@ namespace ContraDrift
             this.PID_Setting_Kp_RA_filter = new System.Windows.Forms.TextBox();
             this.PlatesolveGroupbox = new System.Windows.Forms.GroupBox();
             this.textBox3 = new System.Windows.Forms.TextBox();
-            this.button4 = new System.Windows.Forms.Button();
+            this.PlaceSolvePathBrowseButton = new System.Windows.Forms.Button();
             this.folderBrowserDialog2 = new System.Windows.Forms.FolderBrowserDialog();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
+            this.Export = new System.Windows.Forms.Button();
+            this.button5 = new System.Windows.Forms.Button();
             this.Timestamp = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Filename = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dt_time = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -98,9 +100,7 @@ namespace ContraDrift
             this.DecI = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.DecD = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.NewDecRate = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Export = new System.Windows.Forms.Button();
-            this.button5 = new System.Windows.Forms.Button();
-            this.button6 = new System.Windows.Forms.Button();
+            this.Messages = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -120,9 +120,8 @@ namespace ContraDrift
             // groupBox1
             // 
             this.groupBox1.Controls.Add(this.textBox2);
-            this.groupBox1.Controls.Add(this.button2);
-            this.groupBox1.Location = new System.Drawing.Point(74, 163);
-            this.groupBox1.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.groupBox1.Controls.Add(this.WatchFolderBrowseButton);
+            this.groupBox1.Location = new System.Drawing.Point(37, 85);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
             this.groupBox1.Size = new System.Drawing.Size(1404, 127);
@@ -138,23 +137,21 @@ namespace ContraDrift
             this.textBox2.Size = new System.Drawing.Size(1006, 31);
             this.textBox2.TabIndex = 1;
             // 
-            // button2
+            // WatchFolderBrowseButton
             // 
-            this.button2.Location = new System.Drawing.Point(32, 37);
-            this.button2.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(262, 50);
-            this.button2.TabIndex = 0;
-            this.button2.Text = "Browse";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.button2_Click);
+            this.WatchFolderBrowseButton.Location = new System.Drawing.Point(16, 19);
+            this.WatchFolderBrowseButton.Name = "WatchFolderBrowseButton";
+            this.WatchFolderBrowseButton.Size = new System.Drawing.Size(131, 26);
+            this.WatchFolderBrowseButton.TabIndex = 0;
+            this.WatchFolderBrowseButton.Text = "Browse";
+            this.WatchFolderBrowseButton.UseVisualStyleBackColor = true;
+            this.WatchFolderBrowseButton.Click += new System.EventHandler(this.WatchFolderBrowseButton_Click);
             // 
             // groupBox2
             // 
             this.groupBox2.Controls.Add(this.textBox1);
-            this.groupBox2.Controls.Add(this.button1);
-            this.groupBox2.Location = new System.Drawing.Point(74, 23);
-            this.groupBox2.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.groupBox2.Controls.Add(this.SelectTelescopeButton);
+            this.groupBox2.Location = new System.Drawing.Point(37, 12);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
             this.groupBox2.Size = new System.Drawing.Size(1404, 129);
@@ -162,27 +159,25 @@ namespace ContraDrift
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "ASCOM";
             // 
-            // button1
+            // SelectTelescopeButton
             // 
-            this.button1.Location = new System.Drawing.Point(32, 37);
-            this.button1.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(262, 56);
-            this.button1.TabIndex = 0;
-            this.button1.Text = "Select Telescope";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.SelectTelescopeButton.Location = new System.Drawing.Point(16, 19);
+            this.SelectTelescopeButton.Name = "SelectTelescopeButton";
+            this.SelectTelescopeButton.Size = new System.Drawing.Size(131, 29);
+            this.SelectTelescopeButton.TabIndex = 0;
+            this.SelectTelescopeButton.Text = "Select Telescope";
+            this.SelectTelescopeButton.UseVisualStyleBackColor = true;
+            this.SelectTelescopeButton.Click += new System.EventHandler(this.SelectTelescopeButton_Click);
             // 
-            // button3
+            // StartStopButton
             // 
-            this.button3.Location = new System.Drawing.Point(1552, 52);
-            this.button3.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(184, 56);
-            this.button3.TabIndex = 5;
-            this.button3.Text = "Start";
-            this.button3.UseVisualStyleBackColor = true;
-            this.button3.Click += new System.EventHandler(this.button3_Click);
+            this.StartStopButton.Location = new System.Drawing.Point(776, 27);
+            this.StartStopButton.Name = "StartStopButton";
+            this.StartStopButton.Size = new System.Drawing.Size(92, 29);
+            this.StartStopButton.TabIndex = 5;
+            this.StartStopButton.Text = "Start";
+            this.StartStopButton.UseVisualStyleBackColor = true;
+            this.StartStopButton.Click += new System.EventHandler(this.StartStopButton_Click);
             // 
             // groupBox3
             // 
@@ -648,9 +643,8 @@ namespace ContraDrift
             // PlatesolveGroupbox
             // 
             this.PlatesolveGroupbox.Controls.Add(this.textBox3);
-            this.PlatesolveGroupbox.Controls.Add(this.button4);
-            this.PlatesolveGroupbox.Location = new System.Drawing.Point(74, 302);
-            this.PlatesolveGroupbox.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.PlatesolveGroupbox.Controls.Add(this.PlaceSolvePathBrowseButton);
+            this.PlatesolveGroupbox.Location = new System.Drawing.Point(37, 157);
             this.PlatesolveGroupbox.Name = "PlatesolveGroupbox";
             this.PlatesolveGroupbox.Padding = new System.Windows.Forms.Padding(6, 6, 6, 6);
             this.PlatesolveGroupbox.Size = new System.Drawing.Size(1404, 138);
@@ -666,16 +660,15 @@ namespace ContraDrift
             this.textBox3.Size = new System.Drawing.Size(1006, 31);
             this.textBox3.TabIndex = 3;
             // 
-            // button4
+            // PlaceSolvePathBrowseButton
             // 
-            this.button4.Location = new System.Drawing.Point(32, 37);
-            this.button4.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(262, 50);
-            this.button4.TabIndex = 2;
-            this.button4.Text = "Browse";
-            this.button4.UseVisualStyleBackColor = true;
-            this.button4.Click += new System.EventHandler(this.button4_Click);
+            this.PlaceSolvePathBrowseButton.Location = new System.Drawing.Point(16, 19);
+            this.PlaceSolvePathBrowseButton.Name = "PlaceSolvePathBrowseButton";
+            this.PlaceSolvePathBrowseButton.Size = new System.Drawing.Size(131, 26);
+            this.PlaceSolvePathBrowseButton.TabIndex = 2;
+            this.PlaceSolvePathBrowseButton.Text = "Browse";
+            this.PlaceSolvePathBrowseButton.UseVisualStyleBackColor = true;
+            this.PlaceSolvePathBrowseButton.Click += new System.EventHandler(this.button4_Click);
             // 
             // dataGridView1
             // 
@@ -695,14 +688,34 @@ namespace ContraDrift
             this.DecP,
             this.DecI,
             this.DecD,
-            this.NewDecRate});
-            this.dataGridView1.Location = new System.Drawing.Point(74, 946);
-            this.dataGridView1.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
+            this.NewDecRate,
+            this.Messages});
+            this.dataGridView1.Location = new System.Drawing.Point(37, 492);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.ReadOnly = true;
             this.dataGridView1.RowHeadersWidth = 82;
             this.dataGridView1.Size = new System.Drawing.Size(2116, 488);
             this.dataGridView1.TabIndex = 8;
+            // 
+            // Export
+            // 
+            this.Export.Location = new System.Drawing.Point(1006, 446);
+            this.Export.Name = "Export";
+            this.Export.Size = new System.Drawing.Size(75, 23);
+            this.Export.TabIndex = 9;
+            this.Export.Text = "CSV";
+            this.Export.UseVisualStyleBackColor = true;
+            this.Export.Click += new System.EventHandler(this.Export_Click);
+            // 
+            // button5
+            // 
+            this.button5.Location = new System.Drawing.Point(919, 446);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(75, 23);
+            this.button5.TabIndex = 10;
+            this.button5.Text = "Excel";
+            this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
             // 
             // Timestamp
             // 
@@ -820,27 +833,13 @@ namespace ContraDrift
             this.NewDecRate.ReadOnly = true;
             this.NewDecRate.Width = 182;
             // 
-            // Export
+            // Messages
             // 
-            this.Export.Location = new System.Drawing.Point(2012, 858);
-            this.Export.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.Export.Name = "Export";
-            this.Export.Size = new System.Drawing.Size(150, 44);
-            this.Export.TabIndex = 9;
-            this.Export.Text = "CSV";
-            this.Export.UseVisualStyleBackColor = true;
-            this.Export.Click += new System.EventHandler(this.Export_Click);
-            // 
-            // button5
-            // 
-            this.button5.Location = new System.Drawing.Point(1838, 858);
-            this.button5.Margin = new System.Windows.Forms.Padding(6, 6, 6, 6);
-            this.button5.Name = "button5";
-            this.button5.Size = new System.Drawing.Size(150, 44);
-            this.button5.TabIndex = 10;
-            this.button5.Text = "Excel";
-            this.button5.UseVisualStyleBackColor = true;
-            this.button5.Click += new System.EventHandler(this.button5_Click);
+            this.Messages.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
+            this.Messages.HeaderText = "Messages";
+            this.Messages.Name = "Messages";
+            this.Messages.ReadOnly = true;
+            this.Messages.Width = 80;
             // 
             // button6
             // 
@@ -864,7 +863,7 @@ namespace ContraDrift
             this.Controls.Add(this.dataGridView1);
             this.Controls.Add(this.PlatesolveGroupbox);
             this.Controls.Add(this.groupBox3);
-            this.Controls.Add(this.button3);
+            this.Controls.Add(this.StartStopButton);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
@@ -891,9 +890,9 @@ namespace ContraDrift
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog1;
         private System.Windows.Forms.TextBox textBox2;
-        private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.Button WatchFolderBrowseButton;
         private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.Button button3;
+        private System.Windows.Forms.Button StartStopButton;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.TextBox PID_Setting_Kd_RA_filter;
@@ -933,9 +932,9 @@ namespace ContraDrift
         private System.Windows.Forms.Button SaveButton;
         private System.Windows.Forms.GroupBox PlatesolveGroupbox;
         private System.Windows.Forms.TextBox textBox3;
-        private System.Windows.Forms.Button button4;
+        private System.Windows.Forms.Button PlaceSolvePathBrowseButton;
         private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog2;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button SelectTelescopeButton;
         private System.Windows.Forms.DataGridView dataGridView1;
         private System.Windows.Forms.Button Export;
         private System.Windows.Forms.Label label11;
@@ -943,6 +942,8 @@ namespace ContraDrift
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.TextBox RaRateLimitTextBox;
         private System.Windows.Forms.Button button5;
+        private System.Windows.Forms.Label label21;
+        private System.Windows.Forms.TextBox BufferFitsCount;
         private System.Windows.Forms.DataGridViewTextBoxColumn Timestamp;
         private System.Windows.Forms.DataGridViewTextBoxColumn Filename;
         private System.Windows.Forms.DataGridViewTextBoxColumn dt_time;
@@ -956,9 +957,7 @@ namespace ContraDrift
         private System.Windows.Forms.DataGridViewTextBoxColumn DecI;
         private System.Windows.Forms.DataGridViewTextBoxColumn DecD;
         private System.Windows.Forms.DataGridViewTextBoxColumn NewDecRate;
-        private System.Windows.Forms.Label label21;
-        private System.Windows.Forms.TextBox BufferFitsCount;
-        private System.Windows.Forms.Button button6;
+        private System.Windows.Forms.DataGridViewTextBoxColumn Messages;
     }
 }
 
