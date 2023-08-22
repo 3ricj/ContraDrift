@@ -59,7 +59,7 @@ namespace ContraDrift
         }
         public bool IsBufferFull()
         {
-            log.Debug("FrameListBuffer: " + framelist.Count);
+            //log.Debug("FrameListBuffer: " + framelist.Count);
             if (framelist.Count >= (PlateCollectionMax)) { return true; } else { return false; }
         }
         public (double, double) GetPlateCollectionAverage()
@@ -75,8 +75,8 @@ namespace ContraDrift
                 WindowIndex++;
             }
             return (
-                CollectionRaSumRecentWindow / PlateCollectionMax,
-                CollectionDecSumRecentWindow / PlateCollectionMax
+                CollectionRaSumRecentWindow / WindowIndex,
+                CollectionDecSumRecentWindow / WindowIndex
                 );
         }
 

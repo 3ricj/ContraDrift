@@ -337,8 +337,10 @@ namespace ContraDrift
 
             frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
             (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
+            if (!framesOld.IsBufferFull()) { log.Debug("Buffer not full.. Buffer status: " + (framesOld.Count() + frames.Count()) + "/" + settings.BufferFitsCount * 2); return; }
 
-            if (FirstImage)
+
+                if (FirstImage)
             {
                 if (Solved)
                 {
@@ -356,7 +358,7 @@ namespace ContraDrift
             }
             else
             {
-                    if (!framesOld.IsBufferFull()) { log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2); return; }
+           //         if (!framesOld.IsBufferFull()) { log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2); return; }
                     //dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
                     (PlateRaArcSecOld, PlateDecArcSecOld) = framesOld.GetPlateCollectionAverage();
                     LastExposureCenter = framesOld.GetPlateCollectionLocalExposureTimeCenter();
@@ -489,14 +491,14 @@ namespace ContraDrift
                     InputFilename,
                     String.Format("{0:0.0}", dt_sec),
                     String.Format("{0:0.000000}", PlateRa),
-                    String.Format("{0:0.00000}", PID_propotional_RA),
+                    String.Format("{0:0.00000}", PID_propotional_RA * dt_sec),
                     String.Format("{0:0.00000}", PID_integral_RA),
                     String.Format("{0:0.00000}", PID_derivative_RA),
                     String.Format("{0:0.0000}", new_RA_rate),
 
 
                     String.Format("{0:0.000000}", PlateDec),
-                    String.Format("{0:0.00000}", PID_propotional_DEC),
+                    String.Format("{0:0.00000}", PID_propotional_DEC * dt_sec),
                     String.Format("{0:0.00000}", PID_integral_DEC),
                     String.Format("{0:0.00000}", PID_derivative_DEC),
                     String.Format("{0:0.0000}", new_DEC_rate),
