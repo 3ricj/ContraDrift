@@ -356,7 +356,6 @@ namespace ContraDrift
             }
             else
             {
-                    //dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
                     (PlateRaArcSecOld, PlateDecArcSecOld) = framesOld.GetPlateCollectionAverage();
                     LastExposureCenter = framesOld.GetPlateCollectionLocalExposureTimeCenter();
                     ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
@@ -366,7 +365,6 @@ namespace ContraDrift
                     dt_sec = ((ExposureCenter - LastExposureCenter).TotalMilliseconds) / 1000;
                     log.Debug("dt_sec: " + dt_sec);
 
-                    // dt_sec = (GetPlateCollectionLocalExposureTimeCenter() - LastExposureTime).TotalMilliseconds) / 1000;
 
                     // PID control for RA
                     PID_propotional_RA = (PlateRaArcSec - PID_previous_PlateRa) / (dt_sec); ;
@@ -446,11 +444,6 @@ namespace ContraDrift
                     PlateDecPrevious = PlateDec;
 
 
-                    //LastExposureTime = PlateLocaltime.AddSeconds(PlateExposureTime / 2);
-
-
-                    log.Info("RA drift: " + PID_integral_RA);
-                    log.Info("DEC drift: " + PID_integral_DEC);
 
                 }
 
