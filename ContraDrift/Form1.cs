@@ -318,7 +318,7 @@ namespace ContraDrift
 
             frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
 
-            if (!frames.IsBufferFull()) { log.Debug("Buffer not full.. "); return; }
+            if (!frames.IsBufferFull()) { log.Debug("Buffer not full.. " , frames.GetBufferSize());  return; }
 
             (PlateRaArcSecOld, PlateDecArcSecOld, PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
 
@@ -334,9 +334,11 @@ namespace ContraDrift
                     PID_previous_PlateRa = PlateRaArcSec;
                     PID_previous_PlateDec = PlateDecArcSec;
                     PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
-                }
+                    PID_propotional_DEC = 0; PID_integral_DEC = 0; PID_derivative_DEC = 0; PID_previous_propotional_DEC = 0;
 
-            }
+                    }
+
+                }
             else
             {
                     //dt_sec = ((PlateLocaltime.AddSeconds(PlateExposureTime / 2) - LastExposureTime).TotalMilliseconds) / 1000;
@@ -465,19 +467,19 @@ namespace ContraDrift
                     InputFilename,
                     String.Format("{0:0.0}", dt_sec),
                     String.Format("{0:0.000000}", PlateRa),
-                    String.Format("{0:0.00000}", PID_propotional_RA),
+                    String.Format("{0:0.00000}", PID_propotional_RA * dt_sec),
                     String.Format("{0:0.00000}", PID_integral_RA),
                     String.Format("{0:0.00000}", PID_derivative_RA),
                     String.Format("{0:0.0000}", new_RA_rate),
 
 
                     String.Format("{0:0.000000}", PlateDec),
-                    String.Format("{0:0.00000}", PID_propotional_DEC),
+                    String.Format("{0:0.00000}", PID_propotional_DEC * dt_sec),
                     String.Format("{0:0.00000}", PID_integral_DEC),
                     String.Format("{0:0.00000}", PID_derivative_DEC),
                     String.Format("{0:0.0000}", new_DEC_rate)
                 );
-                dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.DisplayedRowCount(false) -1;
+                    dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.RowCount-1 ; // dataGridView1.DisplayedRowCount(false) -1;
                 }));
                 //dataGridView1.Invoke(new Action(() =>  { dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.SelectedRows[0].Index; }));
     
@@ -670,8 +672,15 @@ namespace ContraDrift
 
             }
         }
-      
 
+        private void button6_Click(object sender, EventArgs e)
+        {
+            log.Debug("PID reset!");
+            PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
+            PID_propotional_DEC = 0; PID_integral_DEC = 0; PID_derivative_DEC = 0; PID_previous_propotional_DEC = 0;
+            FirstImage = true; 
+
+        }
     }
 
 }

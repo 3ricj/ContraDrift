@@ -29,6 +29,10 @@ namespace ContraDrift
             while (framelist.Count > PlateCollectionMax*2) { framelist.RemoveFirst(); }
 
         }
+        public int GetBufferSize()
+        {
+            return framelist.Count;
+        }
         public void AddPlateCollection(double RaArcSec, double DecArcSec, DateTime starttime, double exposureduration)
         {
             framelist.AddLast(new framedata()
@@ -42,7 +46,7 @@ namespace ContraDrift
         }
         public bool IsBufferFull()
         {
-            Log.Debug("FrameListBuffer: " + framelist.Count);
+            //Log.Debug("FrameListBuffer: " + framelist.Count);
             if (framelist.Count >= (PlateCollectionMax * 2)) { return true; } else { return false; }
         }
         public (double, double, double, double) GetPlateCollectionAverage()
