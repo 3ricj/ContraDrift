@@ -87,20 +87,6 @@ namespace ContraDrift
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.Export = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
-            this.Timestamp = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Filename = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.dt_time = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.PlateRa = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.RaP = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.RaI = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.RaD = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.NewRaRate = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.PlateDec = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.DecP = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.DecI = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.DecD = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.NewDecRate = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Messages = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -625,21 +611,6 @@ namespace ContraDrift
             this.dataGridView1.AllowUserToAddRows = false;
             this.dataGridView1.AllowUserToDeleteRows = false;
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.Timestamp,
-            this.Filename,
-            this.dt_time,
-            this.PlateRa,
-            this.RaP,
-            this.RaI,
-            this.RaD,
-            this.NewRaRate,
-            this.PlateDec,
-            this.DecP,
-            this.DecI,
-            this.DecD,
-            this.NewDecRate,
-            this.Messages});
             this.dataGridView1.Location = new System.Drawing.Point(37, 492);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.ReadOnly = true;
@@ -666,130 +637,6 @@ namespace ContraDrift
             this.button5.Text = "Excel";
             this.button5.UseVisualStyleBackColor = true;
             this.button5.Click += new System.EventHandler(this.button5_Click);
-            // 
-            // Timestamp
-            // 
-            this.Timestamp.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.Timestamp.HeaderText = "Timestamp";
-            this.Timestamp.MinimumWidth = 10;
-            this.Timestamp.Name = "Timestamp";
-            this.Timestamp.ReadOnly = true;
-            this.Timestamp.Width = 83;
-            // 
-            // Filename
-            // 
-            this.Filename.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.ColumnHeader;
-            this.Filename.HeaderText = "Filename";
-            this.Filename.MinimumWidth = 10;
-            this.Filename.Name = "Filename";
-            this.Filename.ReadOnly = true;
-            this.Filename.Width = 74;
-            // 
-            // dt_time
-            // 
-            this.dt_time.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.dt_time.HeaderText = "dt_sec";
-            this.dt_time.Name = "dt_time";
-            this.dt_time.ReadOnly = true;
-            this.dt_time.Width = 64;
-            // 
-            // PlateRa
-            // 
-            this.PlateRa.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.PlateRa.HeaderText = "PlateRa";
-            this.PlateRa.MinimumWidth = 10;
-            this.PlateRa.Name = "PlateRa";
-            this.PlateRa.ReadOnly = true;
-            this.PlateRa.Width = 70;
-            // 
-            // RaP
-            // 
-            this.RaP.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.RaP.HeaderText = "RaP";
-            this.RaP.MinimumWidth = 10;
-            this.RaP.Name = "RaP";
-            this.RaP.ReadOnly = true;
-            this.RaP.Width = 53;
-            // 
-            // RaI
-            // 
-            this.RaI.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.RaI.HeaderText = "RaI";
-            this.RaI.MinimumWidth = 10;
-            this.RaI.Name = "RaI";
-            this.RaI.ReadOnly = true;
-            this.RaI.Width = 49;
-            // 
-            // RaD
-            // 
-            this.RaD.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.RaD.HeaderText = "RaD";
-            this.RaD.MinimumWidth = 10;
-            this.RaD.Name = "RaD";
-            this.RaD.ReadOnly = true;
-            this.RaD.Width = 54;
-            // 
-            // NewRaRate
-            // 
-            this.NewRaRate.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.NewRaRate.HeaderText = "NewRaRate";
-            this.NewRaRate.MinimumWidth = 10;
-            this.NewRaRate.Name = "NewRaRate";
-            this.NewRaRate.ReadOnly = true;
-            this.NewRaRate.Width = 91;
-            // 
-            // PlateDec
-            // 
-            this.PlateDec.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.PlateDec.HeaderText = "PlateDec";
-            this.PlateDec.MinimumWidth = 10;
-            this.PlateDec.Name = "PlateDec";
-            this.PlateDec.ReadOnly = true;
-            this.PlateDec.Width = 76;
-            // 
-            // DecP
-            // 
-            this.DecP.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.DecP.HeaderText = "DecP";
-            this.DecP.MinimumWidth = 10;
-            this.DecP.Name = "DecP";
-            this.DecP.ReadOnly = true;
-            this.DecP.Width = 59;
-            // 
-            // DecI
-            // 
-            this.DecI.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.DecI.HeaderText = "DecI";
-            this.DecI.MinimumWidth = 10;
-            this.DecI.Name = "DecI";
-            this.DecI.ReadOnly = true;
-            this.DecI.Width = 55;
-            // 
-            // DecD
-            // 
-            this.DecD.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.DecD.HeaderText = "DecD";
-            this.DecD.MinimumWidth = 10;
-            this.DecD.Name = "DecD";
-            this.DecD.ReadOnly = true;
-            this.DecD.Width = 60;
-            // 
-            // NewDecRate
-            // 
-            this.NewDecRate.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.NewDecRate.HeaderText = "NewDecRate";
-            this.NewDecRate.MinimumWidth = 10;
-            this.NewDecRate.Name = "NewDecRate";
-            this.NewDecRate.ReadOnly = true;
-            this.NewDecRate.Width = 97;
-            // 
-            // Messages
-            // 
-            this.Messages.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.Messages.HeaderText = "Messages";
-            this.Messages.Name = "Messages";
-            this.Messages.ReadOnly = true;
-            this.Messages.Width = 80;
             // 
             // Form1
             // 
@@ -882,20 +729,6 @@ namespace ContraDrift
         private System.Windows.Forms.Button button5;
         private System.Windows.Forms.Label label21;
         private System.Windows.Forms.TextBox BufferFitsCount;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Timestamp;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Filename;
-        private System.Windows.Forms.DataGridViewTextBoxColumn dt_time;
-        private System.Windows.Forms.DataGridViewTextBoxColumn PlateRa;
-        private System.Windows.Forms.DataGridViewTextBoxColumn RaP;
-        private System.Windows.Forms.DataGridViewTextBoxColumn RaI;
-        private System.Windows.Forms.DataGridViewTextBoxColumn RaD;
-        private System.Windows.Forms.DataGridViewTextBoxColumn NewRaRate;
-        private System.Windows.Forms.DataGridViewTextBoxColumn PlateDec;
-        private System.Windows.Forms.DataGridViewTextBoxColumn DecP;
-        private System.Windows.Forms.DataGridViewTextBoxColumn DecI;
-        private System.Windows.Forms.DataGridViewTextBoxColumn DecD;
-        private System.Windows.Forms.DataGridViewTextBoxColumn NewDecRate;
-        private System.Windows.Forms.DataGridViewTextBoxColumn Messages;
     }
 }
 

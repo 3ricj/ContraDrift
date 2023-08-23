@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using NLog;
 using NLog.Windows.Forms;
 using Excel = Microsoft.Office.Interop.Excel;
-
+using System.Data;
 
 namespace ContraDrift
 {
@@ -22,6 +22,9 @@ namespace ContraDrift
         BackgroundWorker worker = new BackgroundWorker();
         FileSystemWatcher watcher = new FileSystemWatcher();
         TaskFactory tFactory = new TaskFactory();
+
+        DataTable datatable = new DataTable();
+
         public FrameList frames;
         public FrameList framesOld;
 
@@ -63,8 +66,6 @@ namespace ContraDrift
         private double PlateDecPrevious = -1;
 
 
-        private double PID_previous_PlateRa;   //averaged
-        private double PID_previous_PlateDec; // averaged
         private double dt_sec;
 
         private DateTime LastExposureCenter;
@@ -77,9 +78,7 @@ namespace ContraDrift
         {
             InitializeComponent();
             ConfigureLogger();
-            //LogManager.Setup().LoadConfigurationFromFile("nlog.config");
-            //log = LogManager.GetCurrentClassLogger();
-
+            SetupDataGridView();
 
             textBox1.Text = settings.TelescopeProgId;
             textBox2.Text = settings.WatchFolder;
@@ -337,22 +336,31 @@ namespace ContraDrift
 
             frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
             (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
-            if (!framesOld.IsBufferFull()) { log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2); return; }
+            if (!framesOld.IsBufferFull()) { 
+                    log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2);
+//                    AddDataGridStruct(new DataGridElement { timestamp = DateTime.Now, filename = "test.fits", type = "test", dtsec = 5.222 });
 
-                if (FirstImage)
+
+                    AddDataGridStruct(new DataGridElement
+                    {
+                        timestamp = DateTime.Now,
+                        filename = InputFilename,
+                        type = "BUFFER-" + (framesOld.Count() + frames.Count()),
+                        platera = PlateRa,
+                        platedec = PlateDec
+                    }); 
+
+                    return; 
+                }
+
+            if (FirstImage)
             {
-                if (Solved)
-                {
                     FirstImage = false;
                     PlateRaReference = PlateRaArcSec;
                     PlateDecReference = PlateDecArcSec;
                     ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
                     log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
-                    PID_previous_PlateRa = PlateRaArcSec;
-                    PID_previous_PlateDec = PlateDecArcSec;
                     PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
-                }
-
             }
             else
             {
@@ -367,81 +375,25 @@ namespace ContraDrift
 
 
                     // PID control for RA
-                    PID_propotional_RA = (PlateRaArcSec - PID_previous_PlateRa) / (dt_sec); ;
+                    PID_propotional_RA = (PlateRaArcSec - PlateRaArcSecOld) / (dt_sec); 
                     PID_integral_RA = (PlateRaArcSec - PlateRaReference) ;
                     PID_derivative_RA = (PID_propotional_RA - PID_previous_propotional_RA) / (dt_sec);
                     new_RA_rate = settings.PID_Setting_Kp_RA * PID_propotional_RA + settings.PID_Setting_Ki_RA * PID_integral_RA + settings.PID_Setting_Kd_RA * PID_derivative_RA;
 
 
-                    // PID control for RA with IIF filtered derivative - set up dt dependent constants
-                    A0_RA = settings.PID_Setting_Kp_RA_filter + settings.PID_Setting_Ki_RA_filter * dt_sec + settings.PID_Setting_Kd_RA_filter / dt_sec;
-                    A1_RA = -settings.PID_Setting_Kp_RA_filter;
-                    A0d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
-                    A1d_RA = -2.0 * settings.PID_Setting_Kd_RA_filter / dt_sec;
-                    A2d_RA = settings.PID_Setting_Kd_RA_filter / dt_sec;
-                    Nfilt_RA = settings.PID_Setting_Nfilt_RA;
-                    tau_RA = settings.PID_Setting_Kd_RA_filter / (settings.PID_Setting_Kp_RA_filter * Nfilt_RA);
-                    alpha_RA = dt_sec / (2.0 * tau_RA);
 
-                    // Perform RA PID with IIF filtered derivative
-                    PID_error_third_RA = PID_error_last_RA;
-                    PID_error_last_RA = PID_previous_propotional_RA;
-                    PID_error_new_RA = PID_propotional_RA;
-                    PID_der1_RA = PID_der0_RA;
-                    PID_der0_RA = A0d_RA * PID_error_new_RA + A1d_RA * PID_error_last_RA + A2d_RA * PID_error_third_RA;
-                    fder0_RA = (alpha_RA / (alpha_RA + 1)) * (PID_der0_RA + PID_der1_RA) - ((alpha_RA - 1) / (alpha_RA + 1)) * PID_der1_RA;
-                    new_RA_rate_filtder = A0_RA * PID_error_new_RA + A1_RA * PID_error_last_RA + fder0_RA;
-
-                    log.Debug("PID_RA:  PID_previous_propotional_RA: " + PID_previous_propotional_RA + ",PID_propotional_RA: " + PID_propotional_RA + ",PID_integral_RA: " + PID_integral_RA + ",PID_derivative_RA: " + PID_derivative_RA + ",new_RA_rate: " + new_RA_rate);
                     log.Debug("PID_RA_settings:  PID_Setting_Kp_RA: " + settings.PID_Setting_Kp_RA + ",PID_Setting_Ki_RA: " + settings.PID_Setting_Ki_RA + ",PID_Setting_Kd_RA: " + settings.PID_Setting_Kd_RA);
-                    log.Debug("PID_RA_filter settings:  PID_Setting_Kp_RA_filter: " + settings.PID_Setting_Kp_RA_filter + ",PID_Setting_Ki_RA_filter: " + settings.PID_Setting_Ki_RA_filter + ",PID_Setting_Kd_RA_filter: " + settings.PID_Setting_Kd_RA_filter + ",PID_Setting_Nfilt_RA: " + settings.PID_Setting_Nfilt_RA);
-                    log.Debug("PID_RA_Filter:  fder0_RA: " + fder0_RA);
-
-
+                    log.Debug("PID_RA:  PID_previous_propotional_RA: " + PID_previous_propotional_RA + ",PID_propotional_RA: " + PID_propotional_RA + ",PID_integral_RA: " + PID_integral_RA + ",PID_derivative_RA: " + PID_derivative_RA + ",new_RA_rate: " + new_RA_rate);
 
                     // standard PID control for DEC
-                    PID_propotional_DEC = (PlateDecArcSec - PID_previous_PlateDec) / (dt_sec); ;
+                    PID_propotional_DEC = (PlateDecArcSec - PlateDecArcSecOld) / (dt_sec); ;
                     PID_integral_DEC = (PlateDecArcSec - PlateDecReference) ;
                     PID_derivative_DEC = (PID_propotional_DEC - PID_previous_propotional_DEC) / (dt_sec);
                     new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
 
 
-
-                    // PID control for DEC with IIF filtered derivative - set up dt dependent constants
-                    A0_DEC = settings.PID_Setting_Kp_DEC_filter + settings.PID_Setting_Ki_DEC_filter * dt_sec + settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                    A1_DEC = -settings.PID_Setting_Kp_DEC_filter;
-                    A0d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                    A1d_DEC = -2.0 * settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                    A2d_DEC = settings.PID_Setting_Kd_DEC_filter / dt_sec;
-                    Nfilt_DEC = settings.PID_Setting_Nfilt_DEC;
-                    tau_DEC = settings.PID_Setting_Kd_DEC_filter / (settings.PID_Setting_Kp_DEC_filter * Nfilt_DEC);
-                    alpha_DEC = dt_sec / (2.0 * tau_DEC);
-
-                    // Perform DEC PID with IIF filtered derivative
-                    PID_error_third_DEC = PID_error_last_DEC;
-                    PID_error_last_DEC = PID_previous_propotional_DEC;
-                    PID_error_new_DEC = PID_propotional_DEC;
-                    PID_der1_DEC = PID_der0_DEC;
-                    PID_der0_DEC = A0d_DEC * PID_error_new_DEC + A1d_DEC * PID_error_last_DEC + A2d_DEC * PID_error_third_DEC;
-                    fder0_DEC = (alpha_DEC / (alpha_DEC + 1)) * (PID_der0_DEC + PID_der1_DEC) - ((alpha_DEC - 1) / (alpha_DEC + 1)) * PID_der1_DEC;
-                    new_DEC_rate_filtder = A0_DEC * PID_error_new_DEC + A1_DEC * PID_error_last_DEC + fder0_DEC;
-
                     log.Debug("PID_DEC:  PID_previous_propotional_DEC: " + PID_previous_propotional_DEC + ",PID_propotional_DEC: " + PID_propotional_DEC + ",PID_integral_DEC: " + PID_integral_DEC + ",PID_derivative_DEC: " + PID_derivative_DEC + ",new_DEC_rate: " + new_DEC_rate);
                     log.Debug("PID_DEC_settings:  PID_Setting_Kp_DEC: " + settings.PID_Setting_Kp_DEC + ",PID_Setting_Ki_DEC: " + settings.PID_Setting_Ki_DEC + ",PID_Setting_Kd_DEC: " + settings.PID_Setting_Kd_DEC);
-                    log.Debug("PID_DEC_filter settings:  PID_Setting_Kp_DEC_filter: " + settings.PID_Setting_Kp_DEC_filter + ",PID_Setting_Ki_DEC_filter: " + settings.PID_Setting_Ki_DEC_filter + ",PID_Setting_Kd_DEC_filter: " + settings.PID_Setting_Kd_DEC_filter + ",PID_Setting_Nfilt_DEC: " + settings.PID_Setting_Nfilt_DEC);
-                    log.Debug("PID_DEC_Filter:  fder0_DEC: " + fder0_DEC);
-
-
-                    PID_previous_3rd_propotional_RA = PID_previous_propotional_RA;
-                    PID_previous_3rd_propotional_DEC = PID_previous_propotional_DEC;
-                    PID_previous_propotional_RA = PID_propotional_RA;
-                    PID_previous_propotional_DEC = PID_propotional_DEC;
-                    PID_previous_PlateDec = PlateDecArcSec;
-                    PID_previous_PlateRa = PlateRaArcSec;
-                    LastExposureCenter = ExposureCenter;
-
-                    PlateRaPrevious = PlateRa;
-                    PlateDecPrevious = PlateDec;
 
 
 
@@ -474,32 +426,23 @@ namespace ContraDrift
 
             }
 
-
-                dataGridView1.Invoke(new Action(() => { 
-                dataGridView1.Rows.Add(
-                    DateTime.Now,
-                    InputFilename,
-                    String.Format("{0:0.0}", dt_sec),
-                    String.Format("{0:0.000000}", PlateRa),
-                    String.Format("{0:0.00000}", PID_propotional_RA),
-                    String.Format("{0:0.00000}", PID_integral_RA),
-                    String.Format("{0:0.00000}", PID_derivative_RA),
-                    String.Format("{0:0.0000}", new_RA_rate),
-
-
-                    String.Format("{0:0.000000}", PlateDec),
-                    String.Format("{0:0.00000}", PID_propotional_DEC),
-                    String.Format("{0:0.00000}", PID_integral_DEC),
-                    String.Format("{0:0.00000}", PID_derivative_DEC),
-                    String.Format("{0:0.0000}", new_DEC_rate),
-                    PendingMessage
-                );
-                    dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.RowCount - 1; 
-                }));
-
-                PendingMessage = "";
-                //dataGridView1.Invoke(new Action(() =>  { dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.SelectedRows[0].Index; }));
-    
+                AddDataGridStruct(new DataGridElement { 
+                    timestamp = DateTime.Now, 
+                    filename = InputFilename, 
+                    type = "LIGHT", 
+                    dtsec = dt_sec, 
+                    platera = PlateRa, 
+                    rap = PID_propotional_RA, 
+                    rai = PID_integral_RA, 
+                    rad = PID_derivative_RA, 
+                    newrarate = new_RA_rate,
+                    platedec = PlateDec, 
+                    decp = PID_propotional_DEC,
+                    deci = PID_integral_DEC,
+                    decd = PID_derivative_DEC,
+                    newdecrate = new_DEC_rate
+                });
+   
 
             }).ContinueWith(t =>
             {
@@ -695,7 +638,150 @@ namespace ContraDrift
         {
             PendingMessage = PendingMessage + incomingMsg;
         }
-      
+        struct DataGridElement
+        {
+            public DateTime timestamp;
+            public string type;
+            public string filename;
+            public double dtsec;
+            public double platera;
+            public double rap;
+            public double rai;
+            public double rad;
+            public double newrarate;
+            public double platedec;
+            public double decp;
+            public double deci;
+            public double decd;
+            public double newdecrate;
+        }
+
+        private void AddDataGridStruct(DataGridElement datagridelement)
+        {
+            dataGridView1.Invoke(new Action(() =>
+            {
+                datatable.Rows.Add(
+                datagridelement.timestamp,
+                datagridelement.filename,
+                datagridelement.type,
+                datagridelement.dtsec,
+                datagridelement.platera,
+                datagridelement.rap,
+                datagridelement.rai,
+                datagridelement.rad,
+                datagridelement.newrarate,
+                datagridelement.platedec,
+                datagridelement.decp,
+                datagridelement.deci,
+                datagridelement.decd,
+                datagridelement.newdecrate,
+                PendingMessage);
+
+                dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.RowCount - 1;
+               // datatable.AcceptChanges();
+            }));
+            PendingMessage = "";
+
+        }
+
+
+        private void SetupDataGridView()
+        {
+
+            //DataTable dt = new DataTable();
+
+            dataGridView1.DataSource = datatable;
+
+            datatable.Columns.Add(new DataColumn("Timestamp", typeof(DateTime)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "hh:mm:ss";
+            dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].SortMode = DataGridViewColumnSortMode.NotSortable;
+
+            datatable.Columns.Add(new DataColumn("Filename", typeof(String)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("Filename")].AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader;
+            dataGridView1.Columns[datatable.Columns.IndexOf("Filename")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("Filename")].SortMode = DataGridViewColumnSortMode.NotSortable;
+
+            datatable.Columns.Add(new DataColumn("Type", typeof(String)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("Type")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("Type")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("Type")].SortMode = DataGridViewColumnSortMode.NotSortable;
+
+            datatable.Columns.Add(new DataColumn("dt_sec", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("dt_sec")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("dt_sec")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("dt_sec")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("dt_sec")].DefaultCellStyle.Format = "0.0";
+
+            datatable.Columns.Add(new DataColumn("PlateRa", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateRa")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateRa")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateRa")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateRa")].DefaultCellStyle.Format = "0.0000000";
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateRa")].SortMode = DataGridViewColumnSortMode.NotSortable;
+
+            datatable.Columns.Add(new DataColumn("RaP", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaP")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaP")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaP")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaP")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("RaI", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaI")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaI")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaI")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaI")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("RaD", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaD")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaD")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaD")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("RaD")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("NewRaRate", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("NewRaRate")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("NewRaRate")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("NewRaRate")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("NewRaRate")].DefaultCellStyle.Format = "0.00000";
+
+
+            datatable.Columns.Add(new DataColumn("PlateDec", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateDec")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateDec")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateDec")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateDec")].DefaultCellStyle.Format = "0.0000000";
+
+            datatable.Columns.Add(new DataColumn("DecP", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecP")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecP")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecP")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecP")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("DecI", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecI")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecI")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecI")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecI")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("DecD", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecD")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecD")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecD")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("DecD")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("NewDecRate", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("NewDecRate")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("NewDecRate")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("NewDecRate")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("NewDecRate")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("Messages", typeof(String)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("Messages")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("Messages")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("Messages")].AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader;
+
+
+        }
 
     }
 
