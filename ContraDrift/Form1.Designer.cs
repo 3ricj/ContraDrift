@@ -650,7 +650,7 @@ namespace ContraDrift
             // 
             chartArea1.Name = "ChartArea1";
             this.ChartRa.ChartAreas.Add(chartArea1);
-            this.ChartRa.Location = new System.Drawing.Point(763, 301);
+            this.ChartRa.Location = new System.Drawing.Point(763, 71);
             this.ChartRa.Name = "ChartRa";
             series1.ChartArea = "ChartArea1";
             series1.Name = "Series1";
@@ -663,7 +663,7 @@ namespace ContraDrift
             // 
             chartArea2.Name = "ChartArea1";
             this.ChartDec.ChartAreas.Add(chartArea2);
-            this.ChartDec.Location = new System.Drawing.Point(763, 67);
+            this.ChartDec.Location = new System.Drawing.Point(763, 298);
             this.ChartDec.Name = "ChartDec";
             series2.ChartArea = "ChartArea1";
             series2.Name = "Series1";
