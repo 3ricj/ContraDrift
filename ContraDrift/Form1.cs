@@ -12,7 +12,10 @@ using NLog.Windows.Forms;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Data;
 using System.Windows.Forms.DataVisualization;
-//using System.Web.UI.DataVisualization.Charting;
+using System.Collections.Generic;
+using System.Runtime.Remoting.Messaging;
+using Microsoft.VisualBasic.FileIO;
+
 
 
 namespace ContraDrift
@@ -72,7 +75,8 @@ namespace ContraDrift
         private double dt_sec;
 
         private DateTime LastExposureCenter;
-        private string PendingMessage; 
+        private string PendingMessage;
+        private DateTime ProcessingStartDateTime;
 
 
 
@@ -262,6 +266,8 @@ namespace ContraDrift
 
                 save_settings();
 
+                ProcessingStartDateTime = DateTime.Now;
+
                 //worker.DoWork += new DoWorkEventHandler(worker_backgroundProcess);
                 //worker.RunWorkerAsync();
 
@@ -280,8 +286,8 @@ namespace ContraDrift
                     watcher.Created += new FileSystemEventHandler(ProcessNewFits);
                     watcher.Renamed += new RenamedEventHandler(ProcessNewFits);
                     //watcher.Changed += new FileSystemEventHandler(ProcessNewFits);
+                    watcher.Filter = "*.*";
 
-                    watcher.Filter = "*.fits";
 
                 }
                 watcher.EnableRaisingEvents = true;
@@ -347,7 +353,7 @@ namespace ContraDrift
 
                     AddDataGridStruct(new DataGridElement
                     {
-                        timestamp = DateTime.Now,
+                        timestamp = PlateLocaltime,
                         filename = InputFilename,
                         type = "BUFFER-" + (framesOld.Count() + frames.Count()),
                         platera = PlateRa,
@@ -367,7 +373,7 @@ namespace ContraDrift
                     AddMessage("Reference image. ");
                     AddDataGridStruct(new DataGridElement
                     {
-                        timestamp = DateTime.Now,
+                        timestamp = PlateLocaltime,
                         filename = InputFilename,
                         type = "REF",
                         platera = PlateRa,
@@ -402,7 +408,7 @@ namespace ContraDrift
                     log.Debug("PID_RA:  PID_previous_propotional_RA: " + PID_previous_propotional_RA + ",PID_propotional_RA: " + PID_propotional_RA + ",PID_integral_RA: " + PID_integral_RA + ",PID_derivative_RA: " + PID_derivative_RA + ",new_RA_rate: " + new_RA_rate);
 
                     // standard PID control for DEC
-                    PID_propotional_DEC = (PlateDecArcSec - PlateDecArcSecOld) / (dt_sec); ;
+                    PID_propotional_DEC = (PlateDecArcSec - PlateDecArcSecOld) / (dt_sec); 
                     PID_integral_DEC = (PlateDecArcSec - PlateDecReference);
                     PID_derivative_DEC = (PID_propotional_DEC - PID_previous_propotional_DEC) / (dt_sec);
                     new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
@@ -444,7 +450,7 @@ namespace ContraDrift
 
                     AddDataGridStruct(new DataGridElement
                     {
-                        timestamp = DateTime.Now,
+                        timestamp = PlateLocaltime,
                         filename = InputFilename,
                         type = "LIGHT",
                         dtsec = dt_sec,
@@ -484,12 +490,45 @@ namespace ContraDrift
 
         public (bool, double, double, DateTime, double, double, float) SolveFits(string InputFilename, double LastPlateRa = -1, double LastPlateDec = -1)
         {
-
             double PlateRa = 0, PlateDec = 0, PlateExposureTime = 0;
             DateTime PlateLocaltime = DateTime.Now;
             double Airmass = 0;
             float Solvetime = 0;
             bool Solved = false;
+            float timeoffset = 0;
+
+
+            if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Debug("Other file detected not processed: " + InputFilename);  return (false, 0, 0, DateTime.Now, 0, 0, 0);  }
+
+            if (Path.GetExtension(InputFilename) == ".fitscsv")
+            {
+
+                using (TextFieldParser csvParser = new TextFieldParser(InputFilename))
+                {
+                    csvParser.CommentTokens = new string[] { "#" };
+                    csvParser.SetDelimiters(new string[] { "," });
+                    csvParser.HasFieldsEnclosedInQuotes = true;
+
+                    // Skip the row with the column names
+                    csvParser.ReadLine();
+
+                    while (!csvParser.EndOfData)
+                    {
+
+                        string[] fields = csvParser.ReadFields();
+                        timeoffset = float.Parse(fields[0]);
+                        PlateRa = float.Parse(fields[1]) / 15;  //convert degrees into hour angles so the format is the same as the plate solver.
+                        PlateDec = float.Parse(fields[2]);
+                    }
+
+
+                }
+                log.Debug("Parsing fitscsv: " + InputFilename + ",PlateRa: " + PlateRa + ",PlateDec:" + PlateDec);
+
+                return (true, PlateRa, PlateDec, ProcessingStartDateTime.AddMonths(-1).AddSeconds(timeoffset), 0, 0, 0);
+
+            }
+             
 
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             Plate p = new Plate();
@@ -846,8 +885,13 @@ namespace ContraDrift
             ChartRa.Legends[0].Docking = System.Windows.Forms.DataVisualization.Charting.Docking.Bottom;
             ChartRa.Series[0].Name = "RaP";
             ChartRa.Series[0].ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.FastLine;
+            ChartRa.Series[0].BorderWidth = 3;
+            ChartRa.Series[0].BorderColor = System.Drawing.Color.Red;
+
             ChartRa.Series.Add("RaI");
             ChartRa.Series[1].ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.FastLine;
+            ChartRa.Series[1].BorderWidth = 3;
+            ChartRa.Series[1].BorderColor = System.Drawing.Color.Blue;
 
 
             ChartRa.ChartAreas[0].AxisY.IsStartedFromZero = false;
@@ -858,9 +902,14 @@ namespace ContraDrift
             ChartDec.Legends[0].Docking = System.Windows.Forms.DataVisualization.Charting.Docking.Bottom;
             ChartDec.Series[0].Name = "DecP";
             ChartDec.Series[0].ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.FastLine;
+            ChartDec.Series[0].BorderWidth = 3;
+            ChartDec.Series[0].BorderColor = System.Drawing.Color.Red;
 
             ChartDec.Series.Add("DecI");
             ChartDec.Series[1].ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.FastLine;
+            ChartDec.Series[1].BorderWidth = 3;
+            ChartDec.Series[1].BorderColor = System.Drawing.Color.Blue;
+
 
             ChartDec.ChartAreas[0].AxisY.IsStartedFromZero = false;
             ChartDec.ChartAreas[0].AxisX.IsStartedFromZero = false;
