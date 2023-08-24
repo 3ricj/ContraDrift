@@ -450,13 +450,13 @@ namespace ContraDrift
                         dtsec = dt_sec,
                         platera = PlateRa,
                         plateraarcsecbuf = PlateRaArcSec,
-                        rap = PID_propotional_RA,
+                        rap = PID_propotional_RA * dt_sec,
                         rai = PID_integral_RA,
                         rad = PID_derivative_RA,
                         newrarate = new_RA_rate,
                         platedec = PlateDec,
                         platedecarcsecbuf = PlateDecArcSec,
-                        decp = PID_propotional_DEC,
+                        decp = PID_propotional_DEC * dt_sec,
                         deci = PID_integral_DEC,
                         decd = PID_derivative_DEC,
                         newdecrate = new_DEC_rate
@@ -709,12 +709,17 @@ namespace ContraDrift
             PendingMessage = "";
 
             //ChartRa.Series[0].Points.Add(datagridelement.plateraarcsecbuf);
-            if (datagridelement.type == "LIGHT" || datagridelement.type == "REF")
+            if (datagridelement.type == "LIGHT")
             {
                     BeginInvoke(new Action(() =>
                     {
-                        ChartRa.Series[0].Points.AddXY(dataGridView1.RowCount, datagridelement.plateraarcsecbuf);
+                        ChartRa.Series[0].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.rap);
+                        ChartRa.Series[1].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.rai);
                         ChartRa.ChartAreas[0].RecalculateAxesScale();
+
+                        ChartDec.Series[0].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.rap);
+                        ChartDec.Series[1].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.rai);
+                        ChartDec.ChartAreas[0].RecalculateAxesScale();
                     }));
 
                 }
@@ -839,18 +844,26 @@ namespace ContraDrift
             ChartRa.Legends.Clear();
             ChartRa.Legends.Add("Ra-Arcsec");
             ChartRa.Legends[0].Docking = System.Windows.Forms.DataVisualization.Charting.Docking.Bottom;
-
-            ChartRa.Series[0].Name = "Ra-Arcsec";
+            ChartRa.Series[0].Name = "RaP";
             ChartRa.Series[0].ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.FastLine;
-            //ChartRa.Series[0].Points.DataBindXY(datatable.DefaultView, "NewRaRate", "PlateRa");
-            //ChartRa.Series[0].Points.DataBindX
+            ChartRa.Series.Add("RaI");
+            ChartRa.Series[1].ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.FastLine;
+
 
             ChartRa.ChartAreas[0].AxisY.IsStartedFromZero = false;
-            //ChartRa.Series[0].Points.AddY( 1023151.122);
-            //ChartRa.Series[0].Points.AddY( 1023151.122);
-            //ChartRa.Series[0].Points.AddY( 1023152.122);
-            //ChartRa.Series[0].Points.AddY( 1023153.122);
-            //ChartRa.ChartAreas[0].RecalculateAxesScale();
+            ChartRa.ChartAreas[0].AxisX.IsStartedFromZero = false;
+
+            ChartDec.Legends.Clear();
+            ChartDec.Legends.Add("Dec-Arcsec");
+            ChartDec.Legends[0].Docking = System.Windows.Forms.DataVisualization.Charting.Docking.Bottom;
+            ChartDec.Series[0].Name = "DecP";
+            ChartDec.Series[0].ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.FastLine;
+
+            ChartDec.Series.Add("DecI");
+            ChartDec.Series[1].ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.FastLine;
+
+            ChartDec.ChartAreas[0].AxisY.IsStartedFromZero = false;
+            ChartDec.ChartAreas[0].AxisX.IsStartedFromZero = false;
 
 
 

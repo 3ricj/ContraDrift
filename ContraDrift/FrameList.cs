@@ -62,6 +62,10 @@ namespace ContraDrift
             log.Debug("FrameListBuffer: " + framelist.Count);
             if (framelist.Count >= (PlateCollectionMax)) { return true; } else { return false; }
         }
+        public int PlateCollectionCeiling()
+        {
+            return PlateCollectionMax;
+        }
         public (double, double) GetPlateCollectionAverage()
         {
             DiscardOldest();
