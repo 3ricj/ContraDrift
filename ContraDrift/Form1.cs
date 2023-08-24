@@ -11,6 +11,9 @@ using NLog;
 using NLog.Windows.Forms;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Data;
+using System.Windows.Forms.DataVisualization;
+//using System.Web.UI.DataVisualization.Charting;
+
 
 namespace ContraDrift
 {
@@ -79,6 +82,7 @@ namespace ContraDrift
             InitializeComponent();
             ConfigureLogger();
             SetupDataGridView();
+            SetupCharts();
 
             textBox1.Text = settings.TelescopeProgId;
             textBox2.Text = settings.WatchFolder;
@@ -353,17 +357,29 @@ namespace ContraDrift
                     return; 
                 }
 
-            if (FirstImage)
-            {
-                    FirstImage = false;
+                if (FirstImage)
+                {
                     PlateRaReference = PlateRaArcSec;
                     PlateDecReference = PlateDecArcSec;
                     ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
                     log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
                     PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
-            }
-            else
-            {
+                    AddMessage("Reference image. ");
+                    AddDataGridStruct(new DataGridElement
+                    {
+                        timestamp = DateTime.Now,
+                        filename = InputFilename,
+                        type = "REF",
+                        platera = PlateRa,
+                        platedec = PlateDec,
+                        plateraarcsecbuf = PlateRaReference,
+                        platedecarcsecbuf = PlateDecReference
+                    });
+                    FirstImage = false;
+
+                }
+                else
+                {
                     (PlateRaArcSecOld, PlateDecArcSecOld) = framesOld.GetPlateCollectionAverage();
                     LastExposureCenter = framesOld.GetPlateCollectionLocalExposureTimeCenter();
                     ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
@@ -375,8 +391,8 @@ namespace ContraDrift
 
 
                     // PID control for RA
-                    PID_propotional_RA = (PlateRaArcSec - PlateRaArcSecOld) / (dt_sec); 
-                    PID_integral_RA = (PlateRaArcSec - PlateRaReference) ;
+                    PID_propotional_RA = (PlateRaArcSec - PlateRaArcSecOld) / (dt_sec);
+                    PID_integral_RA = (PlateRaArcSec - PlateRaReference);
                     PID_derivative_RA = (PID_propotional_RA - PID_previous_propotional_RA) / (dt_sec);
                     new_RA_rate = settings.PID_Setting_Kp_RA * PID_propotional_RA + settings.PID_Setting_Ki_RA * PID_integral_RA + settings.PID_Setting_Kd_RA * PID_derivative_RA;
 
@@ -387,7 +403,7 @@ namespace ContraDrift
 
                     // standard PID control for DEC
                     PID_propotional_DEC = (PlateDecArcSec - PlateDecArcSecOld) / (dt_sec); ;
-                    PID_integral_DEC = (PlateDecArcSec - PlateDecReference) ;
+                    PID_integral_DEC = (PlateDecArcSec - PlateDecReference);
                     PID_derivative_DEC = (PID_propotional_DEC - PID_previous_propotional_DEC) / (dt_sec);
                     new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
 
@@ -397,52 +413,55 @@ namespace ContraDrift
 
 
 
+
+
+                    if (ProcessingFilter.Checked)
+                    {
+                        new_DEC_rate = new_DEC_rate_filtder;
+                        new_RA_rate = new_RA_rate_filtder;
+                        log.Debug("Processing Filter mode enabled, override new_RA_rate to: " + new_RA_rate + " ,new_DEC_rate: " + new_DEC_rate);
+
+                    }
+
+                    // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
+                    if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate)
+                    {
+                        if (new_RA_rate < float.Parse(RaRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text) * -1; }
+                        if (new_RA_rate > float.Parse(RaRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text); }
+                        telescope.RightAscensionRate = new_RA_rate / 15;
+                        log.Debug("Setting RightAscensionRate: " + new_RA_rate);
+                        if (new_DEC_rate < float.Parse(DecRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text) * -1; }
+                        if (new_DEC_rate > float.Parse(DecRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text); }
+                        telescope.DeclinationRate = new_DEC_rate / 0.9972695677;
+                        log.Debug("Setting DeclinationRate: " + new_DEC_rate);
+                    }
+                    else
+                    {
+                        log.Error("Telescope is not tracking!!! not setting tracking rates!!! Resetting everything.");
+                        FirstImage = true; // reset everything, reference image etc.  
+
+                    }
+
+                    AddDataGridStruct(new DataGridElement
+                    {
+                        timestamp = DateTime.Now,
+                        filename = InputFilename,
+                        type = "LIGHT",
+                        dtsec = dt_sec,
+                        platera = PlateRa,
+                        plateraarcsecbuf = PlateRaArcSec,
+                        rap = PID_propotional_RA,
+                        rai = PID_integral_RA,
+                        rad = PID_derivative_RA,
+                        newrarate = new_RA_rate,
+                        platedec = PlateDec,
+                        platedecarcsecbuf = PlateDecArcSec,
+                        decp = PID_propotional_DEC,
+                        deci = PID_integral_DEC,
+                        decd = PID_derivative_DEC,
+                        newdecrate = new_DEC_rate
+                    }); 
                 }
-
-                if (ProcessingFilter.Checked)
-                {
-                    new_DEC_rate = new_DEC_rate_filtder;
-                    new_RA_rate = new_RA_rate_filtder;
-                    log.Debug("Processing Filter mode enabled, override new_RA_rate to: " + new_RA_rate + " ,new_DEC_rate: " + new_DEC_rate);
-
-                }
-
-            // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
-            if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate )
-            {
-                if (new_RA_rate < float.Parse(RaRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text) * -1; }
-                if (new_RA_rate > float.Parse(RaRateLimitTextBox.Text) ) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text);  }
-                telescope.RightAscensionRate = new_RA_rate / 15;
-                log.Debug("Setting RightAscensionRate: " + new_RA_rate);
-                if (new_DEC_rate < float.Parse(DecRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text) * -1; }
-                if (new_DEC_rate > float.Parse(DecRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text);  }
-                telescope.DeclinationRate = new_DEC_rate / 0.9972695677;
-                log.Debug("Setting DeclinationRate: " + new_DEC_rate);
-            }
-            else
-            {
-                log.Error("Telescope is not tracking!!! not setting tracking rates!!! Resetting everything.");
-                FirstImage = true; // reset everything, reference image etc.  
-
-            }
-
-                AddDataGridStruct(new DataGridElement { 
-                    timestamp = DateTime.Now, 
-                    filename = InputFilename, 
-                    type = "LIGHT", 
-                    dtsec = dt_sec, 
-                    platera = PlateRa, 
-                    rap = PID_propotional_RA, 
-                    rai = PID_integral_RA, 
-                    rad = PID_derivative_RA, 
-                    newrarate = new_RA_rate,
-                    platedec = PlateDec, 
-                    decp = PID_propotional_DEC,
-                    deci = PID_integral_DEC,
-                    decd = PID_derivative_DEC,
-                    newdecrate = new_DEC_rate
-                });
-   
 
             }).ContinueWith(t =>
             {
@@ -488,7 +507,10 @@ namespace ContraDrift
                 p.Solve();
                 PlateRa = p.RightAscension; // in hours
                 PlateDec = p.Declination;  // in degrees
-                PlateLocaltime = p.ExposureStartTime;
+                //PlateLocaltime = p.ExposureStartTime;
+                //log.Debug("fits header DATE-LOC:" + p.ReadFITSValue("DATE-LOC"));  // note that DatetimeParse on DATE-LOC doesn't work.. not sure why? lack of timezone? 
+                //log.Debug("fits header DATE-OBS:" + p.ReadFITSValue("DATE-OBS"));
+                PlateLocaltime = (p.ExposureStartTime).ToLocalTime();
                 PlateExposureTime = p.ExposureInterval;
                 Airmass = p.Airmass;
                 Solved = p.Solved;
@@ -645,11 +667,13 @@ namespace ContraDrift
             public string filename;
             public double dtsec;
             public double platera;
+            public double plateraarcsecbuf;
             public double rap;
             public double rai;
             public double rad;
             public double newrarate;
             public double platedec;
+            public double platedecarcsecbuf;
             public double decp;
             public double deci;
             public double decd;
@@ -666,11 +690,13 @@ namespace ContraDrift
                 datagridelement.type,
                 datagridelement.dtsec,
                 datagridelement.platera,
+                datagridelement.plateraarcsecbuf,
                 datagridelement.rap,
                 datagridelement.rai,
                 datagridelement.rad,
                 datagridelement.newrarate,
                 datagridelement.platedec,
+                datagridelement.platedecarcsecbuf,
                 datagridelement.decp,
                 datagridelement.deci,
                 datagridelement.decd,
@@ -681,6 +707,17 @@ namespace ContraDrift
                // datatable.AcceptChanges();
             }));
             PendingMessage = "";
+
+            //ChartRa.Series[0].Points.Add(datagridelement.plateraarcsecbuf);
+            if (datagridelement.type == "LIGHT" || datagridelement.type == "REF")
+            {
+                    BeginInvoke(new Action(() =>
+                    {
+                        ChartRa.Series[0].Points.AddXY(dataGridView1.RowCount, datagridelement.plateraarcsecbuf);
+                        ChartRa.ChartAreas[0].RecalculateAxesScale();
+                    }));
+
+                }
 
         }
 
@@ -720,6 +757,13 @@ namespace ContraDrift
             dataGridView1.Columns[datatable.Columns.IndexOf("PlateRa")].DefaultCellStyle.Format = "0.0000000";
             dataGridView1.Columns[datatable.Columns.IndexOf("PlateRa")].SortMode = DataGridViewColumnSortMode.NotSortable;
 
+            datatable.Columns.Add(new DataColumn("PlateRaArcSecBuf", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateRaArcSecBuf")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateRaArcSecBuf")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateRaArcSecBuf")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateRaArcSecBuf")].DefaultCellStyle.Format = "0.00";
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateRaArcSecBuf")].SortMode = DataGridViewColumnSortMode.NotSortable;
+
             datatable.Columns.Add(new DataColumn("RaP", typeof(double)));
             dataGridView1.Columns[datatable.Columns.IndexOf("RaP")].SortMode = DataGridViewColumnSortMode.NotSortable;
             dataGridView1.Columns[datatable.Columns.IndexOf("RaP")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
@@ -751,6 +795,13 @@ namespace ContraDrift
             dataGridView1.Columns[datatable.Columns.IndexOf("PlateDec")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
             dataGridView1.Columns[datatable.Columns.IndexOf("PlateDec")].DefaultCellStyle.Format = "0.0000000";
 
+            datatable.Columns.Add(new DataColumn("PlateDecArcSecBuf", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateDecArcSecBuf")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateDecArcSecBuf")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateDecArcSecBuf")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateDecArcSecBuf")].DefaultCellStyle.Format = "0.00";
+            dataGridView1.Columns[datatable.Columns.IndexOf("PlateDecArcSecBuf")].SortMode = DataGridViewColumnSortMode.NotSortable;
+
             datatable.Columns.Add(new DataColumn("DecP", typeof(double)));
             dataGridView1.Columns[datatable.Columns.IndexOf("DecP")].SortMode = DataGridViewColumnSortMode.NotSortable;
             dataGridView1.Columns[datatable.Columns.IndexOf("DecP")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
@@ -779,6 +830,31 @@ namespace ContraDrift
             dataGridView1.Columns[datatable.Columns.IndexOf("Messages")].SortMode = DataGridViewColumnSortMode.NotSortable;
             dataGridView1.Columns[datatable.Columns.IndexOf("Messages")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             dataGridView1.Columns[datatable.Columns.IndexOf("Messages")].AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader;
+
+
+        }
+
+        private void SetupCharts ()
+        {
+            ChartRa.Legends.Clear();
+            ChartRa.Legends.Add("Ra-Arcsec");
+            ChartRa.Legends[0].Docking = System.Windows.Forms.DataVisualization.Charting.Docking.Bottom;
+
+            ChartRa.Series[0].Name = "Ra-Arcsec";
+            ChartRa.Series[0].ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.FastLine;
+            //ChartRa.Series[0].Points.DataBindXY(datatable.DefaultView, "NewRaRate", "PlateRa");
+            //ChartRa.Series[0].Points.DataBindX
+
+            ChartRa.ChartAreas[0].AxisY.IsStartedFromZero = false;
+            //ChartRa.Series[0].Points.AddY( 1023151.122);
+            //ChartRa.Series[0].Points.AddY( 1023151.122);
+            //ChartRa.Series[0].Points.AddY( 1023152.122);
+            //ChartRa.Series[0].Points.AddY( 1023153.122);
+            //ChartRa.ChartAreas[0].RecalculateAxesScale();
+
+
+
+
 
 
         }

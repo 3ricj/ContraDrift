@@ -29,6 +29,9 @@ namespace ContraDrift
         /// </summary>
         private void InitializeComponent()
         {
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea1 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.textBox2 = new System.Windows.Forms.TextBox();
@@ -87,11 +90,13 @@ namespace ContraDrift
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.Export = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
+            this.ChartRa = new System.Windows.Forms.DataVisualization.Charting.Chart();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.PlatesolveGroupbox.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.ChartRa)).BeginInit();
             this.SuspendLayout();
             // 
             // textBox1
@@ -638,12 +643,26 @@ namespace ContraDrift
             this.button5.UseVisualStyleBackColor = true;
             this.button5.Click += new System.EventHandler(this.button5_Click);
             // 
+            // ChartRa
+            // 
+            chartArea1.Name = "ChartArea1";
+            this.ChartRa.ChartAreas.Add(chartArea1);
+            this.ChartRa.Location = new System.Drawing.Point(809, 235);
+            this.ChartRa.Name = "ChartRa";
+            series1.ChartArea = "ChartArea1";
+            series1.Name = "Series1";
+            this.ChartRa.Series.Add(series1);
+            this.ChartRa.Size = new System.Drawing.Size(307, 197);
+            this.ChartRa.TabIndex = 11;
+            this.ChartRa.Text = "chartRA";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSize = true;
             this.ClientSize = new System.Drawing.Size(1442, 739);
+            this.Controls.Add(this.ChartRa);
             this.Controls.Add(this.button5);
             this.Controls.Add(this.Export);
             this.Controls.Add(this.dataGridView1);
@@ -666,6 +685,7 @@ namespace ContraDrift
             this.PlatesolveGroupbox.ResumeLayout(false);
             this.PlatesolveGroupbox.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.ChartRa)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -729,6 +749,7 @@ namespace ContraDrift
         private System.Windows.Forms.Button button5;
         private System.Windows.Forms.Label label21;
         private System.Windows.Forms.TextBox BufferFitsCount;
+        private System.Windows.Forms.DataVisualization.Charting.Chart ChartRa;
     }
 }
 
