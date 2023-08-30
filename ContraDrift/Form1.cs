@@ -517,15 +517,15 @@ namespace ContraDrift
 
                         string[] fields = csvParser.ReadFields();
                         timeoffset = float.Parse(fields[0]);
-                        PlateRa = float.Parse(fields[1]) / 15;  //convert degrees into hour angles so the format is the same as the plate solver.
-                        PlateDec = float.Parse(fields[2]);
+                        PlateRa = double.Parse(fields[1]) / 15;  //convert degrees into hour angles so the format is the same as the plate solver.
+                        PlateDec = double.Parse(fields[2]);
                     }
 
 
                 }
-                log.Debug("Parsing fitscsv: " + InputFilename + ",PlateRa: " + PlateRa + ",PlateDec:" + PlateDec);
+                log.Debug("Parsing fitscsv: " + InputFilename + ",timeoffset: " + timeoffset + ",PlateRa: " + PlateRa + ",PlateDec:" + PlateDec);
 
-                return (true, PlateRa, PlateDec, ProcessingStartDateTime.AddMonths(-1).AddSeconds(timeoffset), 0, 0, 0);
+                return (true, PlateRa, PlateDec, ProcessingStartDateTime.AddMonths(-1).AddSeconds(12 * dataGridView1.Rows.Count), 0, 0, 0);
 
             }
              
