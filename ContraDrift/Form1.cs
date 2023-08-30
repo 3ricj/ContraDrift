@@ -77,6 +77,8 @@ namespace ContraDrift
         private DateTime LastExposureCenter;
         private string PendingMessage;
         private DateTime ProcessingStartDateTime;
+        LinkedList<double> PropotionalJournal_RA = new LinkedList<double>();
+        LinkedList<double> PropotionalJournal_DEC= new LinkedList<double>();
 
 
 
@@ -111,6 +113,8 @@ namespace ContraDrift
             RaRateLimitTextBox.Text = settings.RaRateLimitSetting.ToString();
             DecRateLimitTextBox.Text = settings.DecRateLimitSetting.ToString();
             BufferFitsCount.Text = settings.BufferFitsCount.ToString();
+
+
 
             if (settings.ProcessingTraditional) { ProcessingTraditional.Checked = true; } else { ProcessingFilter.Checked = true; }
 
@@ -350,126 +354,150 @@ namespace ContraDrift
 
 
             if (!framesOld.IsBufferFull()) { 
-                    log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2);
-                    //                    AddDataGridStruct(new DataGridElement { timestamp = DateTime.Now, filename = "test.fits", type = "test", dtsec = 5.222 });
+                log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2);
+                //                    AddDataGridStruct(new DataGridElement { timestamp = DateTime.Now, filename = "test.fits", type = "test", dtsec = 5.222 });
 
-                    if (frames.IsBufferFull() && FirstImage)
-                    {
-                        PlateRaReference = PlateRaArcSec;
-                        PlateDecReference = PlateDecArcSec;
-                        ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
-                        log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
-                        PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
-                        AddMessage("Reference image. ");
-                        FirstImage = false;
-                        AddDataGridStruct(new DataGridElement
-                        {
-                            timestamp = PlateLocaltime,
-                            filename = InputFilename,
-                            type = "REF-" + "BUFFER-" + (framesOld.Count() + frames.Count()),
-                            platera = PlateRa,
-                            platedec = PlateDec,
-                            plateraarcsecbuf = PlateRaReference,
-                            platedecarcsecbuf = PlateDecReference
-                        });
-                    }
-                    else
-                    {
-
-
-                        AddDataGridStruct(new DataGridElement
-                        {
-                            timestamp = PlateLocaltime,
-                            filename = InputFilename,
-                            type = "BUFFER-" + (framesOld.Count() + frames.Count()),
-                            platera = PlateRa,
-                            platedec = PlateDec
-                        });
-                    }
-
-                    return; 
-                }
-                    (PlateRaArcSecOld, PlateDecArcSecOld) = framesOld.GetPlateCollectionAverage();
-                    LastExposureCenter = framesOld.GetPlateCollectionLocalExposureTimeCenter();
+                if (frames.IsBufferFull() && FirstImage)
+                {
+                    PlateRaReference = PlateRaArcSec;
+                    PlateDecReference = PlateDecArcSec;
                     ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
-
-                    log.Debug("ExposureCenter: " + ExposureCenter);
-                    log.Debug("LastExposureCenter: " + LastExposureCenter);
-                    dt_sec = ((ExposureCenter - LastExposureCenter).TotalMilliseconds) / 1000;
-                    log.Debug("dt_sec: " + dt_sec);
-
-
-                    // PID control for RA
-                    PID_propotional_RA = (PlateRaArcSec - PlateRaArcSecOld) / (dt_sec);
-                    PID_integral_RA = (PlateRaArcSec - PlateRaReference);
-                    PID_derivative_RA = (PID_propotional_RA - PID_previous_propotional_RA) / (dt_sec);
-                    new_RA_rate = settings.PID_Setting_Kp_RA * PID_propotional_RA + settings.PID_Setting_Ki_RA * PID_integral_RA + settings.PID_Setting_Kd_RA * PID_derivative_RA;
-
-
-
-                    log.Debug("PID_RA_settings:  PID_Setting_Kp_RA: " + settings.PID_Setting_Kp_RA + ",PID_Setting_Ki_RA: " + settings.PID_Setting_Ki_RA + ",PID_Setting_Kd_RA: " + settings.PID_Setting_Kd_RA);
-                    log.Debug("PID_RA:  PID_previous_propotional_RA: " + PID_previous_propotional_RA + ",PID_propotional_RA: " + PID_propotional_RA + ",PID_integral_RA: " + PID_integral_RA + ",PID_derivative_RA: " + PID_derivative_RA + ",new_RA_rate: " + new_RA_rate);
-
-                    // standard PID control for DEC
-                    PID_propotional_DEC = (PlateDecArcSec - PlateDecArcSecOld) / (dt_sec); 
-                    PID_integral_DEC = ( PlateDecArcSec - PlateDecReference);
-                    PID_derivative_DEC = (PID_propotional_DEC - PID_previous_propotional_DEC) / (dt_sec);
-                    new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
-
-
-                    log.Debug("PID_DEC:  PID_previous_propotional_DEC: " + PID_previous_propotional_DEC + ",PID_propotional_DEC: " + PID_propotional_DEC + ",PID_integral_DEC: " + PID_integral_DEC + ",PID_derivative_DEC: " + PID_derivative_DEC + ",new_DEC_rate: " + new_DEC_rate);
-                    log.Debug("PID_DEC_settings:  PID_Setting_Kp_DEC: " + settings.PID_Setting_Kp_DEC + ",PID_Setting_Ki_DEC: " + settings.PID_Setting_Ki_DEC + ",PID_Setting_Kd_DEC: " + settings.PID_Setting_Kd_DEC);
-
-
-
-
-
-                    if (ProcessingFilter.Checked)
+                    log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
+                    PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
+                    AddMessage("Reference image. ");
+                    FirstImage = false;
+                    AddDataGridStruct(new DataGridElement
                     {
-                        new_DEC_rate = new_DEC_rate_filtder;
-                        new_RA_rate = new_RA_rate_filtder;
-                        log.Debug("Processing Filter mode enabled, override new_RA_rate to: " + new_RA_rate + " ,new_DEC_rate: " + new_DEC_rate);
+                        timestamp = PlateLocaltime,
+                        filename = InputFilename,
+                        type =  "BUFFER-" + (framesOld.Count() + frames.Count()) + "-REF" ,
+                        platera = PlateRa,
+                        platedec = PlateDec,
+                        plateraarcsecbuf = PlateRaReference,
+                        platedecarcsecbuf = PlateDecReference
+                    });
+                }
+                else
+                {
 
-                    }
-
-                    // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
-                    if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate)
-                    {
-                        if (new_RA_rate < float.Parse(RaRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text) * -1; }
-                        if (new_RA_rate > float.Parse(RaRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text); }
-                        telescope.RightAscensionRate = new_RA_rate / 15;
-                        log.Debug("Setting RightAscensionRate: " + new_RA_rate);
-                        if (new_DEC_rate < float.Parse(DecRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text) * -1; }
-                        if (new_DEC_rate > float.Parse(DecRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text); }
-                        telescope.DeclinationRate = new_DEC_rate / 0.9972695677;
-                        log.Debug("Setting DeclinationRate: " + new_DEC_rate);
-                    }
-                    else
-                    {
-                        log.Error("Telescope is not tracking!!! not setting tracking rates!!! Resetting everything.");
-                        FirstImage = true; // reset everything, reference image etc.  
-
-                    }
 
                     AddDataGridStruct(new DataGridElement
                     {
                         timestamp = PlateLocaltime,
                         filename = InputFilename,
-                        type = "LIGHT",
+                        type = "BUFFER-" + (framesOld.Count() + frames.Count()),
+                        platera = PlateRa,
+                        platedec = PlateDec
+                    });
+                }
+
+                return; 
+            }
+
+                (PlateRaArcSecOld, PlateDecArcSecOld) = framesOld.GetPlateCollectionAverage();
+                LastExposureCenter = framesOld.GetPlateCollectionLocalExposureTimeCenter();
+                ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
+
+                log.Debug("ExposureCenter: " + ExposureCenter);
+                log.Debug("LastExposureCenter: " + LastExposureCenter);
+                dt_sec = ((ExposureCenter - LastExposureCenter).TotalMilliseconds) / 1000;
+                log.Debug("dt_sec: " + dt_sec);
+
+
+                // PID control for RA
+                PID_propotional_RA = (PlateRaArcSec - PlateRaArcSecOld) / (dt_sec); 
+                PropotionalJournal_RA.AddLast(PID_propotional_RA);
+
+                PID_integral_RA = (PlateRaArcSec - PlateRaReference);
+                PID_derivative_RA = (PID_propotional_RA - PropotionalJournal_RA.First.Value) / (dt_sec);
+                new_RA_rate = settings.PID_Setting_Kp_RA * PID_propotional_RA + settings.PID_Setting_Ki_RA * PID_integral_RA + settings.PID_Setting_Kd_RA * PID_derivative_RA;
+
+
+
+                log.Debug("PID_RA_settings:  PID_Setting_Kp_RA: " + settings.PID_Setting_Kp_RA + ",PID_Setting_Ki_RA: " + settings.PID_Setting_Ki_RA + ",PID_Setting_Kd_RA: " + settings.PID_Setting_Kd_RA);
+                log.Debug("PID_RA:  PID_previous_propotional_RA: " + PID_previous_propotional_RA + ",PID_propotional_RA: " + PID_propotional_RA + ",PID_integral_RA: " + PID_integral_RA + ",PID_derivative_RA: " + PID_derivative_RA + ",new_RA_rate: " + new_RA_rate);
+
+                // standard PID control for DEC
+                PID_propotional_DEC = (PlateDecArcSec - PlateDecArcSecOld) / (dt_sec);
+                PropotionalJournal_DEC.AddLast(PID_propotional_DEC);
+                PID_integral_DEC = ( PlateDecArcSec - PlateDecReference);
+                PID_derivative_DEC = (PID_propotional_DEC - PropotionalJournal_DEC.First.Value) / (dt_sec);
+                new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
+
+
+                log.Debug("PID_DEC:  PID_previous_propotional_DEC: " + PID_previous_propotional_DEC + ",PID_propotional_DEC: " + PID_propotional_DEC + ",PID_integral_DEC: " + PID_integral_DEC + ",PID_derivative_DEC: " + PID_derivative_DEC + ",new_DEC_rate: " + new_DEC_rate);
+                log.Debug("PID_DEC_settings:  PID_Setting_Kp_DEC: " + settings.PID_Setting_Kp_DEC + ",PID_Setting_Ki_DEC: " + settings.PID_Setting_Ki_DEC + ",PID_Setting_Kd_DEC: " + settings.PID_Setting_Kd_DEC);
+
+                if (PropotionalJournal_DEC.Count <= settings.BufferFitsCount  ) {
+
+                    AddDataGridStruct(new DataGridElement
+                    {
+                        timestamp = PlateLocaltime,
+                        filename = InputFilename,
+                        type = "PRECALC-" + PropotionalJournal_DEC.Count,
                         dtsec = dt_sec,
                         platera = PlateRa,
                         plateraarcsecbuf = PlateRaArcSec,
                         rap = PID_propotional_RA * dt_sec,
                         rai = PID_integral_RA,
-                        rad = PID_derivative_RA,
-                        newrarate = new_RA_rate,
                         platedec = PlateDec,
                         platedecarcsecbuf = PlateDecArcSec,
                         decp = PID_propotional_DEC * dt_sec,
                         deci = PID_integral_DEC,
-                        decd = PID_derivative_DEC,
-                        newdecrate = new_DEC_rate
-                    }); 
+                    });
+                    log.Debug("Precalc:  Loading up the PropotionalJournal");
+                    return;
+                }
+                if (PropotionalJournal_RA.Count > settings.BufferFitsCount) { PropotionalJournal_RA.RemoveFirst(); }
+                if (PropotionalJournal_DEC.Count > settings.BufferFitsCount) { PropotionalJournal_DEC.RemoveFirst(); }
+
+
+                if (ProcessingFilter.Checked)
+                {
+                    new_DEC_rate = new_DEC_rate_filtder;
+                    new_RA_rate = new_RA_rate_filtder;
+                    log.Debug("Processing Filter mode enabled, override new_RA_rate to: " + new_RA_rate + " ,new_DEC_rate: " + new_DEC_rate);
+
+                }
+
+                // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
+                if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate)
+                {
+                    if (new_RA_rate < float.Parse(RaRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text) * -1; }
+                    if (new_RA_rate > float.Parse(RaRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text); }
+                    telescope.RightAscensionRate = new_RA_rate / 15;
+                    log.Debug("Setting RightAscensionRate: " + new_RA_rate);
+                    if (new_DEC_rate < float.Parse(DecRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text) * -1; }
+                    if (new_DEC_rate > float.Parse(DecRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text); }
+                    telescope.DeclinationRate = new_DEC_rate / 0.9972695677;
+                    log.Debug("Setting DeclinationRate: " + new_DEC_rate);
+                }
+                else
+                {
+                    log.Error("Telescope is not tracking!!! not setting tracking rates!!! Resetting everything.");
+                    FirstImage = true; // reset everything, reference image etc.  
+
+                }
+
+                AddDataGridStruct(new DataGridElement
+                {
+                    timestamp = PlateLocaltime,
+                    filename = InputFilename,
+                    type = "LIGHT",
+                    dtsec = dt_sec,
+                    platera = PlateRa,
+                    plateraarcsecbuf = PlateRaArcSec,
+                    rap = PID_propotional_RA * dt_sec,
+                    rai = PID_integral_RA,
+                    rad = PID_derivative_RA,
+                    newrarate = new_RA_rate,
+                    platedec = PlateDec,
+                    platedecarcsecbuf = PlateDecArcSec,
+                    decp = PID_propotional_DEC * dt_sec,
+                    deci = PID_integral_DEC,
+                    decd = PID_derivative_DEC,
+                    newdecrate = new_DEC_rate
+                }); 
                 
 
             }).ContinueWith(t =>
