@@ -346,46 +346,49 @@ namespace ContraDrift
 
             frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
             (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
+
+
+
             if (!framesOld.IsBufferFull()) { 
                     log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2);
-//                    AddDataGridStruct(new DataGridElement { timestamp = DateTime.Now, filename = "test.fits", type = "test", dtsec = 5.222 });
+                    //                    AddDataGridStruct(new DataGridElement { timestamp = DateTime.Now, filename = "test.fits", type = "test", dtsec = 5.222 });
 
-
-                    AddDataGridStruct(new DataGridElement
+                    if (frames.IsBufferFull() && FirstImage)
                     {
-                        timestamp = PlateLocaltime,
-                        filename = InputFilename,
-                        type = "BUFFER-" + (framesOld.Count() + frames.Count()),
-                        platera = PlateRa,
-                        platedec = PlateDec
-                    }); 
+                        PlateRaReference = PlateRaArcSec;
+                        PlateDecReference = PlateDecArcSec;
+                        ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
+                        log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
+                        PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
+                        AddMessage("Reference image. ");
+                        FirstImage = false;
+                        AddDataGridStruct(new DataGridElement
+                        {
+                            timestamp = PlateLocaltime,
+                            filename = InputFilename,
+                            type = "REF-" + "BUFFER-" + (framesOld.Count() + frames.Count()),
+                            platera = PlateRa,
+                            platedec = PlateDec,
+                            plateraarcsecbuf = PlateRaReference,
+                            platedecarcsecbuf = PlateDecReference
+                        });
+                    }
+                    else
+                    {
+
+
+                        AddDataGridStruct(new DataGridElement
+                        {
+                            timestamp = PlateLocaltime,
+                            filename = InputFilename,
+                            type = "BUFFER-" + (framesOld.Count() + frames.Count()),
+                            platera = PlateRa,
+                            platedec = PlateDec
+                        });
+                    }
 
                     return; 
                 }
-
-                if (FirstImage)
-                {
-                    PlateRaReference = PlateRaArcSec;
-                    PlateDecReference = PlateDecArcSec;
-                    ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
-                    log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
-                    PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
-                    AddMessage("Reference image. ");
-                    AddDataGridStruct(new DataGridElement
-                    {
-                        timestamp = PlateLocaltime,
-                        filename = InputFilename,
-                        type = "REF",
-                        platera = PlateRa,
-                        platedec = PlateDec,
-                        plateraarcsecbuf = PlateRaReference,
-                        platedecarcsecbuf = PlateDecReference
-                    });
-                    FirstImage = false;
-
-                }
-                else
-                {
                     (PlateRaArcSecOld, PlateDecArcSecOld) = framesOld.GetPlateCollectionAverage();
                     LastExposureCenter = framesOld.GetPlateCollectionLocalExposureTimeCenter();
                     ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
@@ -409,7 +412,7 @@ namespace ContraDrift
 
                     // standard PID control for DEC
                     PID_propotional_DEC = (PlateDecArcSec - PlateDecArcSecOld) / (dt_sec); 
-                    PID_integral_DEC = (PlateDecArcSec - PlateDecReference);
+                    PID_integral_DEC = ( PlateDecArcSec - PlateDecReference);
                     PID_derivative_DEC = (PID_propotional_DEC - PID_previous_propotional_DEC) / (dt_sec);
                     new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
 
@@ -467,7 +470,7 @@ namespace ContraDrift
                         decd = PID_derivative_DEC,
                         newdecrate = new_DEC_rate
                     }); 
-                }
+                
 
             }).ContinueWith(t =>
             {
