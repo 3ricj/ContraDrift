@@ -331,7 +331,7 @@ namespace ContraDrift
 
             string InputFilename = e.FullPath;
             log.Debug("New File: " + InputFilename);
-            (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
+            (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime, double FitsRa, double FitsDec) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
 
 
             double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
@@ -374,7 +374,9 @@ namespace ContraDrift
                         platera = PlateRa,
                         platedec = PlateDec,
                         plateraarcsecbuf = PlateRaReference,
-                        platedecarcsecbuf = PlateDecReference
+                        platedecarcsecbuf = PlateDecReference, 
+                        fitsheaderra = FitsRa, 
+                        fitsheaderdec = FitsDec
                     });
                 }
                 else
@@ -387,7 +389,9 @@ namespace ContraDrift
                         filename = InputFilename,
                         type = "BUFFER-" + (framesOld.Count() + frames.Count()),
                         platera = PlateRa,
-                        platedec = PlateDec
+                        platedec = PlateDec,
+                        fitsheaderra = FitsRa,
+                        fitsheaderdec = FitsDec
                     });
                 }
 
@@ -496,7 +500,12 @@ namespace ContraDrift
                     decp = PID_propotional_DEC * dt_sec,
                     deci = PID_integral_DEC,
                     decd = PID_derivative_DEC,
-                    newdecrate = new_DEC_rate
+                    newdecrate = new_DEC_rate,
+                    scopera = ScopeRa,
+                    scopedec = ScopeDec,
+                    fitsheaderra = FitsRa,
+                    fitsheaderdec = FitsDec,
+                    RateUpdateTimeStamp = DateTime.Now
                 }); 
                 
 
@@ -519,7 +528,7 @@ namespace ContraDrift
             save_settings();
         }
 
-        public (bool, double, double, DateTime, double, double, float) SolveFits(string InputFilename, double LastPlateRa = -1, double LastPlateDec = -1)
+        public (bool, double, double, DateTime, double, double, float, double, double) SolveFits(string InputFilename, double LastPlateRa = -1, double LastPlateDec = -1)
         {
             double PlateRa = 0, PlateDec = 0, PlateExposureTime = 0;
             DateTime PlateLocaltime = DateTime.Now;
@@ -527,9 +536,11 @@ namespace ContraDrift
             float Solvetime = 0;
             bool Solved = false;
             float timeoffset = 0;
+            double FitsRa = 0, FitsDec = 0;
 
 
-            if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Debug("Other file detected not processed: " + InputFilename);  return (false, 0, 0, DateTime.Now, 0, 0, 0);  }
+
+            if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Debug("Other file detected not processed: " + InputFilename);  return (false, 0, 0, DateTime.Now, 0, 0, 0, 0, 0);  }
 
             if (Path.GetExtension(InputFilename) == ".fitscsv")
             {
@@ -556,7 +567,7 @@ namespace ContraDrift
                 }
                 log.Debug("Parsing fitscsv: " + InputFilename + ",timeoffset: " + timeoffset + ",PlateRa: " + PlateRa + ",PlateDec:" + PlateDec);
 
-                return (true, PlateRa, PlateDec, ProcessingStartDateTime.AddMonths(-1).AddSeconds(12 * dataGridView1.Rows.Count), 0, 0, 0);
+                return (true, PlateRa, PlateDec, ProcessingStartDateTime.AddMonths(-1).AddSeconds(12 * dataGridView1.Rows.Count), 0, 0, 0, 0, 0);
 
             }
              
@@ -580,20 +591,29 @@ namespace ContraDrift
                 //PlateLocaltime = p.ExposureStartTime;
                 //log.Debug("fits header DATE-LOC:" + p.ReadFITSValue("DATE-LOC"));  // note that DatetimeParse on DATE-LOC doesn't work.. not sure why? lack of timezone? 
                 //log.Debug("fits header DATE-OBS:" + p.ReadFITSValue("DATE-OBS"));
+                FitsRa = Convert.ToDouble(p.ReadFITSValue("RA"));
+                FitsDec = Convert.ToDouble(p.ReadFITSValue("DEC"));
                 PlateLocaltime = (p.ExposureStartTime).ToLocalTime();
                 PlateExposureTime = p.ExposureInterval;
                 Airmass = p.Airmass;
                 Solved = p.Solved;
 
                 //log.Info("Platesolve: {@InputFilename},{@RightAscension},{@PlateDec},{@PlateLocaltime},{@PlateExposureTime},{@AirMass},{@SolveTime},", InputFilename, PlateRa, PlateDec, PlateLocaltime, p.Airmass, stopwatch.ElapsedMilliseconds / 1000);
-                log.Info("Platesolve: Filename: " + InputFilename + " PlateRa: " + PlateRa + " PlateDec: " + PlateDec + " PlateLocaltime: " + PlateLocaltime + " Airmass: " + p.Airmass + " Solvetime: " + (float)stopwatch.ElapsedMilliseconds / 1000);
+                log.Info("Platesolve: Filename: " + InputFilename +
+                    " PlateRa: " + PlateRa + 
+                    " PlateDec: " + PlateDec + 
+                    " PlateLocaltime: " + PlateLocaltime + 
+                    " Airmass: " + p.Airmass + 
+                    " FitsRa: " + FitsRa + 
+                    " FitsDec: " + FitsDec + 
+                    " Solvetime: " + (float)stopwatch.ElapsedMilliseconds / 1000);
 
             }
             catch (Exception ex)
             {
                 log.Debug(ex);
                 _ = Marshal.ReleaseComObject(p);
-                return (false, 0, 0, DateTime.Now, 0, 0, 0);
+                return (false, 0, 0, DateTime.Now, 0, 0, 0, 0 ,0);
 
             }
 
@@ -604,7 +624,7 @@ namespace ContraDrift
 
             stopwatch.Stop();
             //  (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) =  SolveFits(InputFilename);
-            return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime);
+            return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
 
 
 
@@ -748,6 +768,12 @@ namespace ContraDrift
             public double deci;
             public double decd;
             public double newdecrate;
+            public double scopera;
+            public double scopedec;
+            public double fitsheaderra;
+            public double fitsheaderdec;
+            public DateTime RateUpdateTimeStamp;
+
         }
 
         private void AddDataGridStruct(DataGridElement datagridelement)
@@ -771,7 +797,13 @@ namespace ContraDrift
                 datagridelement.deci,
                 datagridelement.decd,
                 datagridelement.newdecrate,
-                PendingMessage);
+                PendingMessage,
+                datagridelement.scopera,
+                datagridelement.scopedec,
+                datagridelement.fitsheaderra,
+                datagridelement.fitsheaderdec,
+                datagridelement.RateUpdateTimeStamp
+                );
 
                 dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.RowCount - 1;
                // datatable.AcceptChanges();
@@ -905,6 +937,35 @@ namespace ContraDrift
             dataGridView1.Columns[datatable.Columns.IndexOf("Messages")].SortMode = DataGridViewColumnSortMode.NotSortable;
             dataGridView1.Columns[datatable.Columns.IndexOf("Messages")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             dataGridView1.Columns[datatable.Columns.IndexOf("Messages")].AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader;
+
+            datatable.Columns.Add(new DataColumn("ScopeRa", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("ScopeRa")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("ScopeRa")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("ScopeRa")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("ScopeRa")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("ScopeDec", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("ScopeDec")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("ScopeDec")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("ScopeDec")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("ScopeDec")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("FitsHeaderRa", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("FitsHeaderRa")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("FitsHeaderRa")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("FitsHeaderRa")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("FitsHeaderRa")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("FitsHeaderDec", typeof(double)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("FitsHeaderDec")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("FitsHeaderDec")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("FitsHeaderDec")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("FitsHeaderDec")].DefaultCellStyle.Format = "0.00000";
+
+            datatable.Columns.Add(new DataColumn("RateUpdateTimeStamp", typeof(DateTime)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "hh:mm:ss";
+            dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].SortMode = DataGridViewColumnSortMode.NotSortable;
 
 
         }
