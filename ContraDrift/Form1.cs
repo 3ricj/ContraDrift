@@ -454,7 +454,7 @@ namespace ContraDrift
                 }
                 if (PropotionalJournal_RA.Count > settings.BufferFitsCount) { PropotionalJournal_RA.RemoveFirst(); }
                 if (PropotionalJournal_DEC.Count > settings.BufferFitsCount) { PropotionalJournal_DEC.RemoveFirst(); }
-
+                
 
                 if (ProcessingFilter.Checked)
                 {
@@ -463,6 +463,23 @@ namespace ContraDrift
                     log.Debug("Processing Filter mode enabled, override new_RA_rate to: " + new_RA_rate + " ,new_DEC_rate: " + new_DEC_rate);
 
                 }
+
+                if (TamperRaRate.Checked)
+                {
+                    log.Debug("TamperingRaRate Checked");
+                    AddMessage("TamperingRaRate Checked");
+                    if (dataGridView1.Rows.Count % 2 == 0) { new_RA_rate = +0.5; } else { new_RA_rate = -0.5; }
+                }
+
+                if (TamperDecRate.Checked)
+                {
+                    log.Debug("TamperingDecRate Checked");
+                    AddMessage("TamperingDecRate Checked");
+
+                    if (dataGridView1.Rows.Count % 2 == 0)  { new_DEC_rate = +0.5; } else { new_DEC_rate = -0.5; }
+                }
+
+
 
                 // TODO: Check that the mount is tracking, and if telescope.RARateIsSettable is true. 
                 if (telescope.Tracking && telescope.CanSetRightAscensionRate && telescope.CanSetDeclinationRate)
@@ -591,7 +608,7 @@ namespace ContraDrift
                 //PlateLocaltime = p.ExposureStartTime;
                 //log.Debug("fits header DATE-LOC:" + p.ReadFITSValue("DATE-LOC"));  // note that DatetimeParse on DATE-LOC doesn't work.. not sure why? lack of timezone? 
                 //log.Debug("fits header DATE-OBS:" + p.ReadFITSValue("DATE-OBS"));
-                FitsRa = Convert.ToDouble(p.ReadFITSValue("RA"));
+                FitsRa = Convert.ToDouble(p.ReadFITSValue("RA")) / 15;
                 FitsDec = Convert.ToDouble(p.ReadFITSValue("DEC"));
                 PlateLocaltime = (p.ExposureStartTime).ToLocalTime();
                 PlateExposureTime = p.ExposureInterval;
