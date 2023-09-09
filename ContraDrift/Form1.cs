@@ -15,8 +15,7 @@ using System.Windows.Forms.DataVisualization;
 using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
 using Microsoft.VisualBasic.FileIO;
-
-
+using System.Globalization;
 
 namespace ContraDrift
 {
@@ -745,15 +744,29 @@ namespace ContraDrift
                     xlWorkSheet.Cells[1, j + 1] = dataGridView1.Columns[j].HeaderText.ToString();
                 }
 
+                dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm:ss.fff";
+                dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm:ss.fff";
+
                 for (i = 0; i <= dataGridView1.RowCount - 1; i++)
                 {
                     for (j = 0; j <= dataGridView1.ColumnCount - 1; j++)
                     {
                         DataGridViewCell cell = dataGridView1[j, i];
-                        xlWorkSheet.Cells[i + 2, j + 1] = cell.Value;
+                        if (cell.ValueType == typeof(DateTime) )
+                        {
+                            xlWorkSheet.Cells[i + 2, j + 1] = cell.FormattedValue.ToString();
+                            xlWorkSheet.Cells[i + 2, j + 1].NumberFormat = "m/d/yyyy h:mm:ss.000";
+                        } else
+                        {
+                            xlWorkSheet.Cells[i + 2, j + 1] = cell.Value;
+                        }
                     }
                 }
                 xlWorkSheet.UsedRange.Columns.AutoFit();
+
+                dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
+                dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
+
 
                 xlWorkBook.SaveAs(Filename, Excel.XlFileFormat.xlWorkbookNormal, misValue, misValue, misValue, misValue, Excel.XlSaveAsAccessMode.xlExclusive, misValue, misValue, misValue, misValue, misValue);
                 xlWorkBook.Close(true, misValue, misValue);
@@ -854,7 +867,7 @@ namespace ContraDrift
             dataGridView1.DataSource = datatable;
 
             datatable.Columns.Add(new DataColumn("Timestamp", typeof(DateTime)));
-            dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "hh:mm:ss";
+            dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
             dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
             dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].SortMode = DataGridViewColumnSortMode.NotSortable;
 
@@ -980,7 +993,7 @@ namespace ContraDrift
             dataGridView1.Columns[datatable.Columns.IndexOf("FitsHeaderDec")].DefaultCellStyle.Format = "0.00000";
 
             datatable.Columns.Add(new DataColumn("RateUpdateTimeStamp", typeof(DateTime)));
-            dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "hh:mm:ss";
+            dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
             dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
             dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].SortMode = DataGridViewColumnSortMode.NotSortable;
 
