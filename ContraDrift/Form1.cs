@@ -79,6 +79,9 @@ namespace ContraDrift
         LinkedList<double> PropotionalJournal_RA = new LinkedList<double>();
         LinkedList<double> PropotionalJournal_DEC= new LinkedList<double>();
 
+        private System.Diagnostics.Stopwatch Stopwatch  = new System.Diagnostics.Stopwatch();
+
+
 
 
 
@@ -496,11 +499,13 @@ namespace ContraDrift
                 {
                     if (new_RA_rate < float.Parse(RaRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text) * -1; }
                     if (new_RA_rate > float.Parse(RaRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Rate of " + new_RA_rate); new_RA_rate = float.Parse(RaRateLimitTextBox.Text); }
-                    telescope.RightAscensionRate = new_RA_rate / 15;
+                    telescope_RightAscensionRate(new_RA_rate / 15);
+
                     log.Debug("Setting RightAscensionRate: " + new_RA_rate);
                     if (new_DEC_rate < float.Parse(DecRateLimitTextBox.Text) * -1) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text) * -1; }
                     if (new_DEC_rate > float.Parse(DecRateLimitTextBox.Text)) { log.Debug("Refusing to set extreme Dec Rate of " + new_DEC_rate); new_DEC_rate = float.Parse(DecRateLimitTextBox.Text); }
-                    telescope.DeclinationRate = new_DEC_rate / 0.9972695677;
+                    telescope_DeclinationRate(new_DEC_rate / 0.9972695677);
+
                     log.Debug("Setting DeclinationRate: " + new_DEC_rate);
                 }
                 else
@@ -549,7 +554,20 @@ namespace ContraDrift
             });
 
     }
-
+        private void telescope_RightAscensionRate (double RaRate)
+        {
+            Stopwatch.Restart();
+            telescope.RightAscensionRate = RaRate;
+            if (Stopwatch.ElapsedMilliseconds > 100) { log.Error("Telescope.RightAscensionRate Latency: " + Stopwatch.ElapsedMilliseconds.ToString() + " ms");  }
+            Stopwatch.Stop();
+        }
+        private void telescope_DeclinationRate(double DecRate)
+        {
+            Stopwatch.Restart();
+            telescope.DeclinationRate = DecRate;
+            if (Stopwatch.ElapsedMilliseconds > 100) { log.Error("Telescope.DeclinationRate Latency: " + Stopwatch.ElapsedMilliseconds.ToString() + " ms"); }
+            Stopwatch.Stop();
+        }
         private void SaveButton_Click(object sender, EventArgs e)
         {
             save_settings();
@@ -599,7 +617,8 @@ namespace ContraDrift
             }
              
 
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            Stopwatch.Restart();
+
             Plate p = new Plate();
             try {
 
@@ -633,7 +652,7 @@ namespace ContraDrift
                     " Airmass: " + p.Airmass + 
                     " FitsRa: " + FitsRa + 
                     " FitsDec: " + FitsDec + 
-                    " Solvetime: " + (float)stopwatch.ElapsedMilliseconds / 1000);
+                    " Solvetime: " + (float)Stopwatch.ElapsedMilliseconds / 1000);
 
             }
             catch (Exception ex)
@@ -649,7 +668,7 @@ namespace ContraDrift
             _ = Marshal.ReleaseComObject(p); // important or the com object leaks memory
 
 
-            stopwatch.Stop();
+            Stopwatch.Stop();
             //  (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) =  SolveFits(InputFilename);
             return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
 
