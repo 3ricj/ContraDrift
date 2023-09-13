@@ -330,7 +330,10 @@ namespace ContraDrift
 
             string InputFilename = e.FullPath;
             log.Debug("New File: " + InputFilename);
+            if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Error("not a fits file, not processing"); return; }
+
             (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime, double FitsRa, double FitsDec) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
+
 
 
             double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
@@ -345,7 +348,15 @@ namespace ContraDrift
 
             log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec + ",ScopeRaRate: " + ScopeRaRate + ",ScopeDecRate: " + ScopeDecRate);
 
-            if (!Solved) { log.Error("Platesolved failed! "); return; }
+            if (!Solved) { 
+                    log.Error("Platesolved failed! ");
+                    AddDataGridStruct(new DataGridElement
+                    {
+                        timestamp = DateTime.Now,
+                        filename = InputFilename,
+                        type = "SOLVEFAIL" 
+                    }); 
+                    return; }
 
             frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
             (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
