@@ -766,52 +766,8 @@ namespace ContraDrift
 
         private void button5_Click(object sender, EventArgs e)
         {
-
-            string Filename = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + Path.DirectorySeparatorChar + "ContraDriftLog" + Path.DirectorySeparatorChar + DateTime.Now.ToString("yyyy -MM-dd HHMMss") + " - ContraDrift.xlsx";
-            if (dataGridView1.RowCount >0)
-            {
-                object misValue = System.Reflection.Missing.Value;
-
-                int i = 0;
-                int j = 0;
-
-
-                //                dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm:ss.fff";
-                //                dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm:ss.fff";
-
-                //                for (i = 0; i <= dataGridView1.RowCount - 1; i++)
-                //{
-                /*                    for (j = 0; j <= dataGridView1.ColumnCount - 1; j++)
-                                    {
-                                        DataGridViewCell cell = dataGridView1[j, i];
-                                        if (cell.ValueType == typeof(DateTime) )
-                                        {
-                                            xlWorkSheet.Cells[i + 2, j + 1] = cell.FormattedValue.ToString();
-                                            xlWorkSheet.Cells[i + 2, j + 1].NumberFormat = "m/d/yyyy h:mm:ss.000";
-                                        } else
-                                        {
-                                            xlWorkSheet.Cells[i + 2, j + 1] = cell.Value;
-                                        }
-                                    } */
-                //}
-                //xlWorkSheet.UsedRange.Columns.AutoFit(); 
-
-                //              dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
-                //                dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
-                xlWorkSheet.UsedRange.Columns.AutoFit();
-                //xlWorkBook.SaveCopyAs(Filename, Excel.XlFileFormat.xlWorkbookNormal, misValue, misValue, misValue, misValue, Excel.XlSaveAsAccessMode.xlExclusive, misValue, misValue, misValue, misValue, misValue);
-                xlWorkBook.SaveCopyAs(Filename);
-                //xlWorkBook.Close(true, misValue, misValue);
-                //xlWorkBook.
-                //xlApp.Quit();
-
-                //xlApp = new Excel.Application();
-                //xlWorkBook = xlApp.Workbooks.Add(misValue);
-                //xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
-
-                System.Diagnostics.Process.Start(@Filename);
-
-            }
+            string file = ExcelSave();
+            System.Diagnostics.Process.Start(@file);
         }
         private void AddMessage(string incomingMsg)
         {
@@ -940,11 +896,19 @@ namespace ContraDrift
                 xlWorkSheet.Cells[1, j + 1] = dataGridView1.Columns[j].HeaderText.ToString();
             }
         }
+        private string ExcelSave() {
+            string Filename = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + Path.DirectorySeparatorChar + "ContraDriftLog" + Path.DirectorySeparatorChar + DateTime.Now.ToString("yyyy -MM-dd HHMMss") + " - ContraDrift.xlsx";
+            xlWorkSheet.UsedRange.Columns.AutoFit();
+            xlWorkBook.SaveCopyAs(Filename);
+            return Filename;
+        }
 
         private void SetupDataGridView()
         {
 
-            //DataTable dt = new DataTable();
+            datatable = new System.Data.DataTable();  
+            //dataGridView1 = new DataGridView();
+
 
             dataGridView1.DataSource = datatable;
 
@@ -1120,11 +1084,30 @@ namespace ContraDrift
 
 
 
+        }
 
+        private void ResetButton_Click(object sender, EventArgs e)
+        {
+            SetupDataGridView();
+            //datatable = new System.Data.DataTable();
+            //dataGridView1.DataSource = datatable;
+
+            ChartRa.Series[0].Points.Clear();
+            ChartRa.Series[1].Points.Clear();
+            ChartRa.ChartAreas[0].RecalculateAxesScale();
+
+            ChartDec.Series[0].Points.Clear();
+            ChartDec.Series[1].Points.Clear();
+            ChartDec.ChartAreas[0].RecalculateAxesScale();
+
+            SetupExcelWriter();
+
+            framesOld = new FrameList(settings.BufferFitsCount);
+            frames = new FrameList(settings.BufferFitsCount, framesOld);
+            ExcelSave();
 
 
         }
-
     }
 
 }

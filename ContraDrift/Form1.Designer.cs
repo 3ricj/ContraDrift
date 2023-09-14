@@ -95,6 +95,7 @@ namespace ContraDrift
             this.ChartDec = new System.Windows.Forms.DataVisualization.Charting.Chart();
             this.TamperRaRate = new System.Windows.Forms.CheckBox();
             this.TamperDecRate = new System.Windows.Forms.CheckBox();
+            this.ResetButton = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -696,12 +697,23 @@ namespace ContraDrift
             this.TamperDecRate.Text = "Tamper DecRate";
             this.TamperDecRate.UseVisualStyleBackColor = true;
             // 
+            // ResetButton
+            // 
+            this.ResetButton.Location = new System.Drawing.Point(1346, 27);
+            this.ResetButton.Name = "ResetButton";
+            this.ResetButton.Size = new System.Drawing.Size(75, 29);
+            this.ResetButton.TabIndex = 15;
+            this.ResetButton.Text = "Reset";
+            this.ResetButton.UseVisualStyleBackColor = true;
+            this.ResetButton.Click += new System.EventHandler(this.ResetButton_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSize = true;
             this.ClientSize = new System.Drawing.Size(1442, 739);
+            this.Controls.Add(this.ResetButton);
             this.Controls.Add(this.TamperDecRate);
             this.Controls.Add(this.TamperRaRate);
             this.Controls.Add(this.ChartDec);
@@ -798,6 +810,7 @@ namespace ContraDrift
         private System.Windows.Forms.DataVisualization.Charting.Chart ChartDec;
         private System.Windows.Forms.CheckBox TamperRaRate;
         private System.Windows.Forms.CheckBox TamperDecRate;
+        private System.Windows.Forms.Button ResetButton;
     }
 }
 
