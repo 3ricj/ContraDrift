@@ -16,6 +16,8 @@ using System.Collections.Generic;
 using System.Runtime.Remoting.Messaging;
 using Microsoft.VisualBasic.FileIO;
 using System.Globalization;
+using Microsoft.Office.Interop.Excel;
+using System.Reflection;
 
 namespace ContraDrift
 {
@@ -28,7 +30,11 @@ namespace ContraDrift
         FileSystemWatcher watcher = new FileSystemWatcher();
         TaskFactory tFactory = new TaskFactory();
 
-        DataTable datatable = new DataTable();
+        System.Data.DataTable datatable = new System.Data.DataTable();
+        Excel.Application xlApp;
+        Excel.Workbook xlWorkBook;
+        Excel.Worksheet xlWorkSheet;
+
 
         public FrameList frames;
         public FrameList framesOld;
@@ -91,6 +97,7 @@ namespace ContraDrift
             ConfigureLogger();
             SetupDataGridView();
             SetupCharts();
+            SetupExcelWriter();
 
             textBox1.Text = settings.TelescopeProgId;
             textBox2.Text = settings.WatchFolder;
@@ -389,7 +396,9 @@ namespace ContraDrift
                         plateraarcsecbuf = PlateRaReference,
                         platedecarcsecbuf = PlateDecReference, 
                         fitsheaderra = FitsRa, 
-                        fitsheaderdec = FitsDec
+                        fitsheaderdec = FitsDec,
+                        pendingmessage = PendingMessage
+                        
                     });
                 }
                 else
@@ -404,7 +413,8 @@ namespace ContraDrift
                         platera = PlateRa,
                         platedec = PlateDec,
                         fitsheaderra = FitsRa,
-                        fitsheaderdec = FitsDec
+                        fitsheaderdec = FitsDec,
+                        pendingmessage = PendingMessage
                     });
                 }
 
@@ -461,6 +471,7 @@ namespace ContraDrift
                         platedecarcsecbuf = PlateDecArcSec,
                         decp = PID_propotional_DEC * dt_sec,
                         deci = PID_integral_DEC,
+                        pendingmessage = PendingMessage
                     });
                     log.Debug("Precalc:  Loading up the PropotionalJournal");
                     return;
@@ -533,6 +544,7 @@ namespace ContraDrift
                     deci = PID_integral_DEC,
                     decd = PID_derivative_DEC,
                     newdecrate = new_DEC_rate,
+                    pendingmessage = PendingMessage,
                     scopera = ScopeRa,
                     scopedec = ScopeDec,
                     fitsheaderra = FitsRa,
@@ -755,52 +767,47 @@ namespace ContraDrift
         private void button5_Click(object sender, EventArgs e)
         {
 
-            string Filename = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + Path.DirectorySeparatorChar + "ContraDriftLog" + Path.DirectorySeparatorChar + DateTime.Now.ToString("yyyy -MM-dd HHMMss") + " - ContraDrift.xls";
+            string Filename = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + Path.DirectorySeparatorChar + "ContraDriftLog" + Path.DirectorySeparatorChar + DateTime.Now.ToString("yyyy -MM-dd HHMMss") + " - ContraDrift.xlsx";
             if (dataGridView1.RowCount >0)
             {
-
-                Excel.Application xlApp;
-                Excel.Workbook xlWorkBook;
-                Excel.Worksheet xlWorkSheet;
                 object misValue = System.Reflection.Missing.Value;
-                xlApp = new Excel.Application();
-                xlWorkBook = xlApp.Workbooks.Add(misValue);
-                xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
+
                 int i = 0;
                 int j = 0;
 
-                for (j = 0; j <= dataGridView1.ColumnCount - 1; j++)
-                {
-                    xlWorkSheet.Cells[1, j + 1] = dataGridView1.Columns[j].HeaderText.ToString();
-                }
 
-                dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm:ss.fff";
-                dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm:ss.fff";
+                //                dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm:ss.fff";
+                //                dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "yyyy-MM-dd HH:mm:ss.fff";
 
-                for (i = 0; i <= dataGridView1.RowCount - 1; i++)
-                {
-                    for (j = 0; j <= dataGridView1.ColumnCount - 1; j++)
-                    {
-                        DataGridViewCell cell = dataGridView1[j, i];
-                        if (cell.ValueType == typeof(DateTime) )
-                        {
-                            xlWorkSheet.Cells[i + 2, j + 1] = cell.FormattedValue.ToString();
-                            xlWorkSheet.Cells[i + 2, j + 1].NumberFormat = "m/d/yyyy h:mm:ss.000";
-                        } else
-                        {
-                            xlWorkSheet.Cells[i + 2, j + 1] = cell.Value;
-                        }
-                    }
-                }
+                //                for (i = 0; i <= dataGridView1.RowCount - 1; i++)
+                //{
+                /*                    for (j = 0; j <= dataGridView1.ColumnCount - 1; j++)
+                                    {
+                                        DataGridViewCell cell = dataGridView1[j, i];
+                                        if (cell.ValueType == typeof(DateTime) )
+                                        {
+                                            xlWorkSheet.Cells[i + 2, j + 1] = cell.FormattedValue.ToString();
+                                            xlWorkSheet.Cells[i + 2, j + 1].NumberFormat = "m/d/yyyy h:mm:ss.000";
+                                        } else
+                                        {
+                                            xlWorkSheet.Cells[i + 2, j + 1] = cell.Value;
+                                        }
+                                    } */
+                //}
+                //xlWorkSheet.UsedRange.Columns.AutoFit(); 
+
+                //              dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
+                //                dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
                 xlWorkSheet.UsedRange.Columns.AutoFit();
+                //xlWorkBook.SaveCopyAs(Filename, Excel.XlFileFormat.xlWorkbookNormal, misValue, misValue, misValue, misValue, Excel.XlSaveAsAccessMode.xlExclusive, misValue, misValue, misValue, misValue, misValue);
+                xlWorkBook.SaveCopyAs(Filename);
+                //xlWorkBook.Close(true, misValue, misValue);
+                //xlWorkBook.
+                //xlApp.Quit();
 
-                dataGridView1.Columns[datatable.Columns.IndexOf("RateUpdateTimeStamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
-                dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
-
-
-                xlWorkBook.SaveAs(Filename, Excel.XlFileFormat.xlWorkbookNormal, misValue, misValue, misValue, misValue, Excel.XlSaveAsAccessMode.xlExclusive, misValue, misValue, misValue, misValue, misValue);
-                xlWorkBook.Close(true, misValue, misValue);
-                xlApp.Quit();
+                //xlApp = new Excel.Application();
+                //xlWorkBook = xlApp.Workbooks.Add(misValue);
+                //xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
 
                 System.Diagnostics.Process.Start(@Filename);
 
@@ -828,6 +835,7 @@ namespace ContraDrift
             public double deci;
             public double decd;
             public double newdecrate;
+            public string pendingmessage;
             public double scopera;
             public double scopedec;
             public double fitsheaderra;
@@ -838,7 +846,7 @@ namespace ContraDrift
 
         private void AddDataGridStruct(DataGridElement datagridelement)
         {
-            dataGridView1.Invoke(new Action(() =>
+            dataGridView1.Invoke(new System.Action(() =>
             {
                 datatable.Rows.Add(
                 datagridelement.timestamp,
@@ -857,7 +865,7 @@ namespace ContraDrift
                 datagridelement.deci,
                 datagridelement.decd,
                 datagridelement.newdecrate,
-                PendingMessage,
+                datagridelement.pendingmessage, 
                 datagridelement.scopera,
                 datagridelement.scopedec,
                 datagridelement.fitsheaderra,
@@ -868,12 +876,11 @@ namespace ContraDrift
                 dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.RowCount - 1;
                // datatable.AcceptChanges();
             }));
-            PendingMessage = "";
 
             //ChartRa.Series[0].Points.Add(datagridelement.plateraarcsecbuf);
             if (datagridelement.type == "LIGHT")
             {
-                    BeginInvoke(new Action(() =>
+                    BeginInvoke(new System.Action(() =>
                     {
                         ChartRa.Series[0].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.rap);
                         ChartRa.Series[1].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.rai);
@@ -885,9 +892,54 @@ namespace ContraDrift
                     }));
 
                 }
+            // TODO update excel object.
+
+            BeginInvoke(new System.Action(() =>
+            {
+
+
+                int i = dataGridView1.RowCount - 1;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Timestamp") + 1] = datagridelement.timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Timestamp") + 1].NumberFormat = "m/d/yyyy h:mm:ss.000";
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Filename") + 1] = datagridelement.filename;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Type") + 1] = datagridelement.type;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("dt_sec") + 1] = datagridelement.dtsec;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("PlateRa") + 1] = datagridelement.platera;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("PlateRaArcSecBuf") + 1] = datagridelement.plateraarcsecbuf;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("RaP") + 1] = datagridelement.rap;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("RaI") + 1] = datagridelement.rai;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("RaD") + 1] = datagridelement.rad;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("NewRaRate") + 1] = datagridelement.newrarate;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("PlateDec") + 1] = datagridelement.platedec;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("PlateDecArcSecBuf") + 1] = datagridelement.platedecarcsecbuf;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("DecP") + 1] = datagridelement.decp;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("DecI") + 1] = datagridelement.deci;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("DecD") + 1] = datagridelement.decd;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("NewDecRate") + 1] = datagridelement.newdecrate;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Messages") + 1] = PendingMessage;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("ScopeRa") + 1] = datagridelement.scopera;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("ScopeDec") + 1] = datagridelement.scopedec;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("FitsHeaderRa") + 1] = datagridelement.fitsheaderra;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("FitsHeaderDec") + 1] = datagridelement.fitsheaderdec;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("RateUpdateTimeStamp") + 1] = datagridelement.RateUpdateTimeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("RateUpdateTimeStamp") + 1].NumberFormat = "m/d/yyyy h:mm:ss.000";
+
+                
+            }));
+            PendingMessage = "";
+
 
         }
-
+        private void SetupExcelWriter() {
+            object misValue = System.Reflection.Missing.Value;
+            xlApp = new Excel.Application();
+            xlWorkBook = xlApp.Workbooks.Add(misValue);
+            xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
+            for (int j = 0; j <= dataGridView1.ColumnCount - 1; j++)
+            {
+                xlWorkSheet.Cells[1, j + 1] = dataGridView1.Columns[j].HeaderText.ToString();
+            }
+        }
 
         private void SetupDataGridView()
         {
@@ -898,7 +950,7 @@ namespace ContraDrift
 
             datatable.Columns.Add(new DataColumn("Timestamp", typeof(DateTime)));
             dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].DefaultCellStyle.Format = "HH:mm:ss.fff";
-            dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader;//  .DisplayedCells;
             dataGridView1.Columns[datatable.Columns.IndexOf("Timestamp")].SortMode = DataGridViewColumnSortMode.NotSortable;
 
             datatable.Columns.Add(new DataColumn("Filename", typeof(String)));
