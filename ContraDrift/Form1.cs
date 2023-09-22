@@ -83,9 +83,9 @@ namespace ContraDrift
         private string PendingMessage;
         private DateTime ProcessingStartDateTime;
         LinkedList<double> PropotionalJournal_RA = new LinkedList<double>();
-        LinkedList<double> PropotionalJournal_DEC= new LinkedList<double>();
+        LinkedList<double> PropotionalJournal_DEC = new LinkedList<double>();
 
-        private System.Diagnostics.Stopwatch Stopwatch  = new System.Diagnostics.Stopwatch();
+        private System.Diagnostics.Stopwatch Stopwatch = new System.Diagnostics.Stopwatch();
 
 
 
@@ -257,8 +257,7 @@ namespace ContraDrift
                 telescope.DeclinationRate = 0;
                 telescope.Connected = false;
                 telescope.Dispose();
-
-                FirstImage = true;
+                ResetAll();
             }
             else
             {
@@ -321,105 +320,107 @@ namespace ContraDrift
 
 
 
-            double ScopeRa, ScopeDec;
-            double ScopeRaRate, ScopeDecRate;
+                double ScopeRa, ScopeDec;
+                double ScopeRaRate, ScopeDecRate;
 
-            //Temp variables for filtered derivative RA PID
-            double new_RA_rate = 0;
-            double new_RA_rate_filtder = 0;
-            double A0_RA, A1_RA, A2_RA;
-            double A0d_RA, A1d_RA, A2d_RA, fder0_RA;
-            double tau_RA, alpha_RA, Nfilt_RA;
-            //Temp variables for filtered derivative DEC PID
-            double new_DEC_rate = 0;
-            double new_DEC_rate_filtder = 0;
-            double A0_DEC, A1_DEC, A2_DEC;
-            double A0d_DEC, A1d_DEC, A2d_DEC, fder0_DEC;
-            double tau_DEC, alpha_DEC, Nfilt_DEC;
-            DateTime ExposureCenter;
+                //Temp variables for filtered derivative RA PID
+                double new_RA_rate = 0;
+                double new_RA_rate_filtder = 0;
+                double A0_RA, A1_RA, A2_RA;
+                double A0d_RA, A1d_RA, A2d_RA, fder0_RA;
+                double tau_RA, alpha_RA, Nfilt_RA;
+                //Temp variables for filtered derivative DEC PID
+                double new_DEC_rate = 0;
+                double new_DEC_rate_filtder = 0;
+                double A0_DEC, A1_DEC, A2_DEC;
+                double A0d_DEC, A1d_DEC, A2d_DEC, fder0_DEC;
+                double tau_DEC, alpha_DEC, Nfilt_DEC;
+                DateTime ExposureCenter;
 
-            string InputFilename = e.FullPath;
-            log.Debug("New File: " + InputFilename);
-            if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Error("not a fits file, not processing"); return; }
+                string InputFilename = e.FullPath;
+                log.Debug("New File: " + InputFilename);
+                if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Error("not a fits file, not processing"); return; }
 
-            (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime, double FitsRa, double FitsDec) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
-
-
-
-            double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
-            double PlateDecArcSec = PlateDec * 3600; // convert from degrees to arcsec
-            double PlateDecArcSecOld, PlateRaArcSecOld;
+                (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime, double FitsRa, double FitsDec) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
 
 
-            ScopeRa = telescope.RightAscension;
-            ScopeDec = telescope.Declination;
-            ScopeRaRate = telescope.RightAscensionRate / 15; //  arcsec to RA Sec per sidereal second divide by 15.  
-            ScopeDecRate = telescope.DeclinationRate;
 
-            log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec + ",ScopeRaRate: " + ScopeRaRate + ",ScopeDecRate: " + ScopeDecRate);
+                double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
+                double PlateDecArcSec = PlateDec * 3600; // convert from degrees to arcsec
+                double PlateDecArcSecOld, PlateRaArcSecOld;
 
-            if (!Solved) { 
+
+                ScopeRa = telescope.RightAscension;
+                ScopeDec = telescope.Declination;
+                ScopeRaRate = telescope.RightAscensionRate / 15; //  arcsec to RA Sec per sidereal second divide by 15.  
+                ScopeDecRate = telescope.DeclinationRate;
+
+                log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec + ",ScopeRaRate: " + ScopeRaRate + ",ScopeDecRate: " + ScopeDecRate);
+
+                if (!Solved) {
                     log.Error("Platesolved failed! ");
                     AddDataGridStruct(new DataGridElement
                     {
                         timestamp = DateTime.Now,
                         filename = InputFilename,
-                        type = "SOLVEFAIL" 
-                    }); 
+                        type = "SOLVEFAIL"
+                    });
                     return; }
 
-            frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
-            (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
+                frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
+                (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
 
 
 
-            if (!framesOld.IsBufferFull()) { 
-                log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2);
-                //                    AddDataGridStruct(new DataGridElement { timestamp = DateTime.Now, filename = "test.fits", type = "test", dtsec = 5.222 });
+                if (!framesOld.IsBufferFull()) {
+                    log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2);
+                    //                    AddDataGridStruct(new DataGridElement { timestamp = DateTime.Now, filename = "test.fits", type = "test", dtsec = 5.222 });
 
-                if (frames.IsBufferFull() && FirstImage)
-                {
-                    PlateRaReference = PlateRaArcSec;
-                    PlateDecReference = PlateDecArcSec;
-                    ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
-                    log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
-                    PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
-                    AddMessage("Reference image. ");
-                    FirstImage = false;
-                    AddDataGridStruct(new DataGridElement
+                    if (frames.IsBufferFull() && FirstImage)
                     {
-                        timestamp = PlateLocaltime,
-                        filename = InputFilename,
-                        type =  "BUFFER-" + (framesOld.Count() + frames.Count()) + "-REF" ,
-                        platera = PlateRa,
-                        platedec = PlateDec,
-                        plateraarcsecbuf = PlateRaReference,
-                        platedecarcsecbuf = PlateDecReference, 
-                        fitsheaderra = FitsRa, 
-                        fitsheaderdec = FitsDec,
-                        pendingmessage = PendingMessage
-                        
-                    });
-                }
-                else
-                {
+                        PlateRaReference = PlateRaArcSec;
+                        PlateDecReference = PlateDecArcSec;
+                        ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
+                        log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
+                        PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
+                        AddMessage("Reference image. ");
+                        FirstImage = false;
+                        AddDataGridStruct(new DataGridElement
+                        {
+                            timestamp = PlateLocaltime,
+                            filename = InputFilename,
+                            type = "BUFFER-" + (framesOld.Count() + frames.Count()) + "-REF",
+                            exptime = PlateExposureTime,
+                            platera = PlateRa,
+                            platedec = PlateDec,
+                            plateraarcsecbuf = PlateRaReference,
+                            platedecarcsecbuf = PlateDecReference,
+                            fitsheaderra = FitsRa,
+                            fitsheaderdec = FitsDec,
+                            pendingmessage = PendingMessage
 
-
-                    AddDataGridStruct(new DataGridElement
+                        });
+                    }
+                    else
                     {
-                        timestamp = PlateLocaltime,
-                        filename = InputFilename,
-                        type = "BUFFER-" + (framesOld.Count() + frames.Count()),
-                        platera = PlateRa,
-                        platedec = PlateDec,
-                        fitsheaderra = FitsRa,
-                        fitsheaderdec = FitsDec,
-                        pendingmessage = PendingMessage
-                    });
-                }
 
-                return; 
-            }
+
+                        AddDataGridStruct(new DataGridElement
+                        {
+                            timestamp = PlateLocaltime,
+                            filename = InputFilename,
+                            type = "BUFFER-" + (framesOld.Count() + frames.Count()),
+                            exptime = PlateExposureTime,
+                            platera = PlateRa,
+                            platedec = PlateDec,
+                            fitsheaderra = FitsRa,
+                            fitsheaderdec = FitsDec,
+                            pendingmessage = PendingMessage
+                        });
+                    }
+
+                    return;
+                }
 
                 (PlateRaArcSecOld, PlateDecArcSecOld) = framesOld.GetPlateCollectionAverage();
                 LastExposureCenter = framesOld.GetPlateCollectionLocalExposureTimeCenter();
@@ -432,7 +433,7 @@ namespace ContraDrift
 
 
                 // PID control for RA
-                PID_propotional_RA = (PlateRaArcSec - PlateRaArcSecOld) / (dt_sec); 
+                PID_propotional_RA = (PlateRaArcSec - PlateRaArcSecOld) / (dt_sec);
                 PropotionalJournal_RA.AddLast(PID_propotional_RA);
 
                 PID_integral_RA = (PlateRaArcSec - PlateRaReference);
@@ -447,7 +448,7 @@ namespace ContraDrift
                 // standard PID control for DEC
                 PID_propotional_DEC = (PlateDecArcSec - PlateDecArcSecOld) / (dt_sec);
                 PropotionalJournal_DEC.AddLast(PID_propotional_DEC);
-                PID_integral_DEC = ( PlateDecArcSec - PlateDecReference);
+                PID_integral_DEC = (PlateDecArcSec - PlateDecReference);
                 PID_derivative_DEC = (PID_propotional_DEC - PropotionalJournal_DEC.First.Value) / (dt_sec);
                 new_DEC_rate = settings.PID_Setting_Kp_DEC * PID_propotional_DEC + settings.PID_Setting_Ki_DEC * PID_integral_DEC + settings.PID_Setting_Kd_DEC * PID_derivative_DEC;
 
@@ -455,13 +456,14 @@ namespace ContraDrift
                 log.Debug("PID_DEC:  PID_previous_propotional_DEC: " + PID_previous_propotional_DEC + ",PID_propotional_DEC: " + PID_propotional_DEC + ",PID_integral_DEC: " + PID_integral_DEC + ",PID_derivative_DEC: " + PID_derivative_DEC + ",new_DEC_rate: " + new_DEC_rate);
                 log.Debug("PID_DEC_settings:  PID_Setting_Kp_DEC: " + settings.PID_Setting_Kp_DEC + ",PID_Setting_Ki_DEC: " + settings.PID_Setting_Ki_DEC + ",PID_Setting_Kd_DEC: " + settings.PID_Setting_Kd_DEC);
 
-                if (PropotionalJournal_DEC.Count <= settings.BufferFitsCount  ) {
+                if (PropotionalJournal_DEC.Count <= settings.BufferFitsCount) {
 
                     AddDataGridStruct(new DataGridElement
                     {
                         timestamp = PlateLocaltime,
                         filename = InputFilename,
                         type = "PRECALC-" + PropotionalJournal_DEC.Count,
+                        exptime = PlateExposureTime,
                         dtsec = dt_sec,
                         platera = PlateRa,
                         plateraarcsecbuf = PlateRaArcSec,
@@ -478,7 +480,7 @@ namespace ContraDrift
                 }
                 if (PropotionalJournal_RA.Count > settings.BufferFitsCount) { PropotionalJournal_RA.RemoveFirst(); }
                 if (PropotionalJournal_DEC.Count > settings.BufferFitsCount) { PropotionalJournal_DEC.RemoveFirst(); }
-                
+
 
                 if (ProcessingFilter.Checked)
                 {
@@ -500,7 +502,7 @@ namespace ContraDrift
                     log.Debug("TamperingDecRate Checked");
                     AddMessage("TamperingDecRate Checked");
 
-                    if (dataGridView1.Rows.Count % 2 == 0)  { new_DEC_rate = +0.5; } else { new_DEC_rate = -0.5; }
+                    if (dataGridView1.Rows.Count % 2 == 0) { new_DEC_rate = +0.5; } else { new_DEC_rate = -0.5; }
                 }
 
 
@@ -531,6 +533,7 @@ namespace ContraDrift
                     timestamp = PlateLocaltime,
                     filename = InputFilename,
                     type = "LIGHT",
+                    exptime = PlateExposureTime,
                     dtsec = dt_sec,
                     platera = PlateRa,
                     plateraarcsecbuf = PlateRaArcSec,
@@ -550,27 +553,27 @@ namespace ContraDrift
                     fitsheaderra = FitsRa,
                     fitsheaderdec = FitsDec,
                     RateUpdateTimeStamp = DateTime.Now
-                }); 
-                
+                });
+
 
             }).ContinueWith(t =>
             {
                 if (t.IsFaulted)
                 {
-                      // EXCEPTION IF THREAD IS FAULT
-                      throw t.Exception;
+                    // EXCEPTION IF THREAD IS FAULT
+                    throw t.Exception;
                 }
                 {
-                      //PROCESS IMAGES AND DISPLAY
-                  }
+                    //PROCESS IMAGES AND DISPLAY
+                }
             });
 
-    }
-        private void telescope_RightAscensionRate (double RaRate)
+        }
+        private void telescope_RightAscensionRate(double RaRate)
         {
             Stopwatch.Restart();
             telescope.RightAscensionRate = RaRate;
-            if (Stopwatch.ElapsedMilliseconds > 100) { log.Error("Telescope.RightAscensionRate Latency: " + Stopwatch.ElapsedMilliseconds.ToString() + " ms");  }
+            if (Stopwatch.ElapsedMilliseconds > 100) { log.Error("Telescope.RightAscensionRate Latency: " + Stopwatch.ElapsedMilliseconds.ToString() + " ms"); }
             Stopwatch.Stop();
         }
         private void telescope_DeclinationRate(double DecRate)
@@ -597,7 +600,7 @@ namespace ContraDrift
 
 
 
-            if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Debug("Other file detected not processed: " + InputFilename);  return (false, 0, 0, DateTime.Now, 0, 0, 0, 0, 0);  }
+            if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Debug("Other file detected not processed: " + InputFilename); return (false, 0, 0, DateTime.Now, 0, 0, 0, 0, 0); }
 
             if (Path.GetExtension(InputFilename) == ".fitscsv")
             {
@@ -627,7 +630,7 @@ namespace ContraDrift
                 return (true, PlateRa, PlateDec, ProcessingStartDateTime.AddMonths(-1).AddSeconds(12 * dataGridView1.Rows.Count), 0, 0, 0, 0, 0);
 
             }
-             
+
 
             Stopwatch.Restart();
 
@@ -637,9 +640,9 @@ namespace ContraDrift
                 p.AttachFITS(InputFilename);
                 p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
                 p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
-                if (LastPlateRa == -1) { p.RightAscension = p.TargetRightAscension; } else { p.RightAscension = LastPlateRa;  }
+                if (LastPlateRa == -1) { p.RightAscension = p.TargetRightAscension; } else { p.RightAscension = LastPlateRa; }
                 if (LastPlateDec == -1) { p.Declination = p.TargetDeclination; } else { p.Declination = LastPlateDec; }
-
+                p.MaxSolveTime = 1;
                 p.Catalog = (CatalogType)11;
                 p.CatalogPath = settings.UCAC4_path;
                 p.CatalogExpansion = 0.4;
@@ -658,12 +661,12 @@ namespace ContraDrift
 
                 //log.Info("Platesolve: {@InputFilename},{@RightAscension},{@PlateDec},{@PlateLocaltime},{@PlateExposureTime},{@AirMass},{@SolveTime},", InputFilename, PlateRa, PlateDec, PlateLocaltime, p.Airmass, stopwatch.ElapsedMilliseconds / 1000);
                 log.Info("Platesolve: Filename: " + InputFilename +
-                    " PlateRa: " + PlateRa + 
-                    " PlateDec: " + PlateDec + 
-                    " PlateLocaltime: " + PlateLocaltime + 
-                    " Airmass: " + p.Airmass + 
-                    " FitsRa: " + FitsRa + 
-                    " FitsDec: " + FitsDec + 
+                    " PlateRa: " + PlateRa +
+                    " PlateDec: " + PlateDec +
+                    " PlateLocaltime: " + PlateLocaltime +
+                    " Airmass: " + p.Airmass +
+                    " FitsRa: " + FitsRa +
+                    " FitsDec: " + FitsDec +
                     " Solvetime: " + (float)Stopwatch.ElapsedMilliseconds / 1000);
 
             }
@@ -671,7 +674,7 @@ namespace ContraDrift
             {
                 log.Debug(ex);
                 _ = Marshal.ReleaseComObject(p);
-                return (false, 0, 0, DateTime.Now, 0, 0, 0, 0 ,0);
+                return (false, 0, 0, DateTime.Now, 0, 0, 0, 0, 0);
 
             }
 
@@ -689,11 +692,11 @@ namespace ContraDrift
         }
         //public Solves
         public struct Platesolve
-            {
+        {
             public string CatalogPath;
             public CatalogType CatalogType;
 
-            };
+        };
 
         private void button4_Click(object sender, EventArgs e)
         {
@@ -778,6 +781,7 @@ namespace ContraDrift
             public DateTime timestamp;
             public string type;
             public string filename;
+            public double exptime;
             public double dtsec;
             public double platera;
             public double plateraarcsecbuf;
@@ -808,6 +812,7 @@ namespace ContraDrift
                 datagridelement.timestamp,
                 datagridelement.filename,
                 datagridelement.type,
+                datagridelement.exptime,
                 datagridelement.dtsec,
                 datagridelement.platera,
                 datagridelement.plateraarcsecbuf,
@@ -821,7 +826,7 @@ namespace ContraDrift
                 datagridelement.deci,
                 datagridelement.decd,
                 datagridelement.newdecrate,
-                datagridelement.pendingmessage, 
+                datagridelement.pendingmessage,
                 datagridelement.scopera,
                 datagridelement.scopedec,
                 datagridelement.fitsheaderra,
@@ -830,24 +835,24 @@ namespace ContraDrift
                 );
 
                 dataGridView1.FirstDisplayedScrollingRowIndex = dataGridView1.RowCount - 1;
-               // datatable.AcceptChanges();
+                // datatable.AcceptChanges();
             }));
 
             //ChartRa.Series[0].Points.Add(datagridelement.plateraarcsecbuf);
             if (datagridelement.type == "LIGHT")
             {
-                    BeginInvoke(new System.Action(() =>
-                    {
-                        ChartRa.Series[0].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.rap);
-                        ChartRa.Series[1].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.rai);
-                        ChartRa.ChartAreas[0].RecalculateAxesScale();
+                BeginInvoke(new System.Action(() =>
+                {
+                    ChartRa.Series[0].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.rap);
+                    ChartRa.Series[1].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.rai);
+                    ChartRa.ChartAreas[0].RecalculateAxesScale();
 
-                        ChartDec.Series[0].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.decp);
-                        ChartDec.Series[1].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.deci);
-                        ChartDec.ChartAreas[0].RecalculateAxesScale();
-                    }));
+                    ChartDec.Series[0].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.decp);
+                    ChartDec.Series[1].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), datagridelement.deci);
+                    ChartDec.ChartAreas[0].RecalculateAxesScale();
+                }));
 
-                }
+            }
             // TODO update excel object.
 
             BeginInvoke(new System.Action(() =>
@@ -859,6 +864,7 @@ namespace ContraDrift
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Timestamp") + 1].NumberFormat = "m/d/yyyy h:mm:ss.000";
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Filename") + 1] = datagridelement.filename;
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Type") + 1] = datagridelement.type;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("ExpTime") + 1] = datagridelement.exptime;
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("dt_sec") + 1] = datagridelement.dtsec;
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("PlateRa") + 1] = datagridelement.platera;
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("PlateRaArcSecBuf") + 1] = datagridelement.plateraarcsecbuf;
@@ -880,7 +886,7 @@ namespace ContraDrift
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("RateUpdateTimeStamp") + 1] = datagridelement.RateUpdateTimeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("RateUpdateTimeStamp") + 1].NumberFormat = "m/d/yyyy h:mm:ss.000";
 
-                
+
             }));
             PendingMessage = "";
 
@@ -906,7 +912,7 @@ namespace ContraDrift
         private void SetupDataGridView()
         {
 
-            datatable = new System.Data.DataTable();  
+            datatable = new System.Data.DataTable();
             //dataGridView1 = new DataGridView();
 
 
@@ -926,6 +932,12 @@ namespace ContraDrift
             dataGridView1.Columns[datatable.Columns.IndexOf("Type")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
             dataGridView1.Columns[datatable.Columns.IndexOf("Type")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             dataGridView1.Columns[datatable.Columns.IndexOf("Type")].SortMode = DataGridViewColumnSortMode.NotSortable;
+
+            datatable.Columns.Add(new DataColumn("ExpTime", typeof(String)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("ExpTime")].SortMode = DataGridViewColumnSortMode.NotSortable;
+            dataGridView1.Columns[datatable.Columns.IndexOf("ExpTime")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("ExpTime")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("ExpTime")].DefaultCellStyle.Format = "0.0";
 
             datatable.Columns.Add(new DataColumn("dt_sec", typeof(double)));
             dataGridView1.Columns[datatable.Columns.IndexOf("dt_sec")].SortMode = DataGridViewColumnSortMode.NotSortable;
@@ -1046,7 +1058,7 @@ namespace ContraDrift
 
         }
 
-        private void SetupCharts ()
+        private void SetupCharts()
         {
             ChartRa.Legends.Clear();
             ChartRa.Legends.Add("Ra-Arcsec");
@@ -1086,12 +1098,8 @@ namespace ContraDrift
 
         }
 
-        private void ResetButton_Click(object sender, EventArgs e)
+        private void ClearCharts()
         {
-            SetupDataGridView();
-            //datatable = new System.Data.DataTable();
-            //dataGridView1.DataSource = datatable;
-
             ChartRa.Series[0].Points.Clear();
             ChartRa.Series[1].Points.Clear();
             ChartRa.ChartAreas[0].RecalculateAxesScale();
@@ -1100,13 +1108,25 @@ namespace ContraDrift
             ChartDec.Series[1].Points.Clear();
             ChartDec.ChartAreas[0].RecalculateAxesScale();
 
+        }
+
+        private void ResetAll()
+        {
+            ExcelSave();
+            SetupDataGridView();
             SetupExcelWriter();
+            ClearCharts();
 
             framesOld = new FrameList(settings.BufferFitsCount);
             frames = new FrameList(settings.BufferFitsCount, framesOld);
-            ExcelSave();
+            PropotionalJournal_RA = new LinkedList<double>();
+            PropotionalJournal_DEC = new LinkedList<double>();
+            FirstImage = true;
+        }
 
-
+        private void ResetButton_Click(object sender, EventArgs e)
+        {
+            ResetAll();
         }
     }
 
