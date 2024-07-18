@@ -1,0 +1,78 @@
+﻿<ResourceDictionary
+    x:Class="NINA.Contradrift.Options"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--  This data template will be displayed in N.I.N.A. on the options->plugin tab with the datacontext of the TestPlugin instance  -->
+    <!--  In order for this datatemplate to be picked correctly, the key has to follow the naming convention of <IPlugin.Name>_Options -->
+    <!--  Furthermore the Resource Dictionary has to be exported via code behind export attributes  -->
+    <DataTemplate x:Key="ContraDrift_Options">
+        <StackPanel Orientation="Vertical">
+
+            <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
+                <TextBlock Width="135"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center">
+                    <TextBlock.Text>Crop Size:</TextBlock.Text>
+                    <TextBlock.ToolTip>This is the width and height of the square image sent to the platesolver.</TextBlock.ToolTip>
+                </TextBlock>
+                <TextBox MinWidth="50" Margin="35,0,0,0" VerticalAlignment="Center" Text="{Binding CropSize}" />
+            </StackPanel>
+
+            <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
+                <TextBlock Width="135"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center">
+                    <TextBlock.Text>Plate Solve Timeout:</TextBlock.Text>
+                    <TextBlock.ToolTip>This is the the timeout sent to the platesolver.</TextBlock.ToolTip>
+                </TextBlock>
+                <TextBox MinWidth="50" Margin="35,0,0,0" VerticalAlignment="Center" Text="{Binding TimeOutSeconds}" />
+            </StackPanel>
+            <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
+                <TextBlock Width="135"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center">
+                    
+                    
+                </TextBlock>
+                <Button
+                        Margin="5"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Command="{Binding ResetContraDriftDefaultsCommand}">
+                    <TextBlock
+                        Margin="10,5,10,5"
+                        Foreground="{StaticResource ButtonForegroundBrush}"
+                        Text="Reset Defaults"
+                        TextWrapping="Wrap" />
+                </Button>
+            </StackPanel>
+
+         
+            <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
+                <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
+                    <TextBlock Width="135"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center">
+                    </TextBlock>
+                    <Button
+                        Margin="5"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Command="{Binding BenchMarkCommand}">
+                        <TextBlock
+                        Margin="10,5,10,5"
+                        Foreground="{StaticResource ButtonForegroundBrush}"
+                        Text="Run Benchmark"
+                        TextWrapping="Wrap" />
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+            <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
+                <TextBox Name="BenchMarkLogTextBox" Width="200" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" IsReadOnly="False" Text="{Binding BenchmarkLog, Mode=OneWay}"></TextBox>
+                
+
+            </StackPanel>
+
+        </StackPanel>
+    </DataTemplate>
+</ResourceDictionary>

@@ -642,10 +642,15 @@ namespace ContraDrift
                 p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
                 if (LastPlateRa == -1) { p.RightAscension = p.TargetRightAscension; } else { p.RightAscension = LastPlateRa; }
                 if (LastPlateDec == -1) { p.Declination = p.TargetDeclination; } else { p.Declination = LastPlateDec; }
-                p.MaxSolveTime = 1;
+                //p.MaxSolveTime = 10;
                 p.Catalog = (CatalogType)11;
                 p.CatalogPath = settings.UCAC4_path;
                 p.CatalogExpansion = 0.4;
+
+                p.TraceLevel = 2;
+                p.TracePath = InputFilename + ".PlateSolveDebug";
+                if (!Directory.Exists(p.TracePath)) { Directory.CreateDirectory(p.TracePath); }
+
                 p.Solve();
                 PlateRa = p.RightAscension; // in hours
                 PlateDec = p.Declination;  // in degrees
