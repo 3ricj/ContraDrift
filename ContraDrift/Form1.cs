@@ -251,7 +251,7 @@ namespace ContraDrift
                 BufferFitsCount.Enabled = true;
 
                 watcher.EnableRaisingEvents = false;
-                //watcher.Dispose();
+                watcher.Dispose();
 
                 telescope.RightAscensionRate = 0;
                 telescope.DeclinationRate = 0;
@@ -282,6 +282,7 @@ namespace ContraDrift
 
                 //worker.DoWork += new DoWorkEventHandler(worker_backgroundProcess);
                 //worker.RunWorkerAsync();
+                watcher = new FileSystemWatcher();
 
                 if (watcher.Path != textBox2.Text)
                 {
@@ -636,8 +637,16 @@ namespace ContraDrift
 
             Plate p = new Plate();
             try {
-
                 p.AttachFITS(InputFilename);
+
+                double SolveRa = Convert.ToDouble(p.ReadFITSValue("SOLVERA"));
+                double SolveDec = Convert.ToDouble(p.ReadFITSValue("SOLVEDEC"));
+                if (!SolveRa.Equals(0.0) && !SolveDec.Equals(0.0))
+                {
+                    log.Info("Using existing SolveRa and SolveDec from header");
+                    return (true, SolveRa, SolveDec, (p.ExposureStartTime).ToLocalTime(), 0, 0, 0, 0, 0);
+                }
+
                 p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
                 p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
                 if (LastPlateRa == -1) { p.RightAscension = p.TargetRightAscension; } else { p.RightAscension = LastPlateRa; }
