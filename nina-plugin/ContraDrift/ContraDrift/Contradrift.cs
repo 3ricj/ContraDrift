@@ -127,14 +127,17 @@ namespace NINA.Contradrift {
             string newfilename = Path.Combine(
                 Path.GetDirectoryName(e.PathToImage.LocalPath),
                 "center", 
-                Path.GetFileNameWithoutExtension(e.PathToImage.ToString()) + "_center" 
+                Path.GetFileNameWithoutExtension(e.PathToImage.ToString()) + "_center.fits" 
                 );
 
             Logger.Debug("New Filename:" + newfilename);
 
+            string tmpfilename = Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString());
+
+            Logger.Debug("Temp Filename:" + tmpfilename);
 
             var FileSaveInfo = new FileSaveInfo {
-                FilePath = newfilename,
+                FilePath = tmpfilename,
                 FileType = Core.Enum.FileTypeEnum.FITS,
                 FilePattern = ""
             };
@@ -162,7 +165,7 @@ namespace NINA.Contradrift {
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeOutSeconds));
             await CroppedImageData.SaveToDisk(FileSaveInfo, cts.Token);
 
-
+            File.Move(tmpfilename + ".fits", newfilename);
 
             return;
             //            throw new NotImplementedException();

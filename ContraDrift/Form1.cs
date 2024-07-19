@@ -18,6 +18,7 @@ using Microsoft.VisualBasic.FileIO;
 using System.Globalization;
 using Microsoft.Office.Interop.Excel;
 using System.Reflection;
+using System.Threading;
 
 namespace ContraDrift
 {
@@ -637,6 +638,8 @@ namespace ContraDrift
 
             Plate p = new Plate();
             try {
+                //Thread.Sleep(100);
+
                 p.AttachFITS(InputFilename);
 
                 double SolveRa = Convert.ToDouble(p.ReadFITSValue("SOLVERA"));
