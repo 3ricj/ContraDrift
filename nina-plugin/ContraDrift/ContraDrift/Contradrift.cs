@@ -70,8 +70,8 @@ namespace NINA.Contradrift {
         private Progress<ApplicationStatus> progress;
 
         public IImageData CroppedImageData;
-
-
+        private bool CropReady;
+        private static Task completedTask = Task.FromResult(false);
 
 
         // Implementing a file pattern
@@ -101,7 +101,7 @@ namespace NINA.Contradrift {
             this.imageSaveMediator.BeforeImageSaved += ImageSaveMediator_BeforeImageSaved;
             this.imageSaveMediator.BeforeFinalizeImageSaved += ImageSaveMediator_BeforeFinalizeImageSaved;
             this.imageSaveMediator.ImageSaved += ImageSaveMediator_ImageSaved;
-                
+            
 
             this.telescopeMediator = telescopeMediator;
             this.plateSolverFactory = plateSolverFactory;
@@ -121,9 +121,55 @@ namespace NINA.Contradrift {
         }
 
         private async void ImageSaveMediator_ImageSaved(object sender, ImageSavedEventArgs e) {
-            Logger.Debug("Filename:" + e.PathToImage.LocalPath);
-            
 
+            PlateSolveParameter param = new PlateSolveParameter() {
+                Binning = 1,
+                Coordinates = telescopeMediator.GetCurrentPosition(),
+                DownSampleFactor = 1,
+                FocalLength = profileService.ActiveProfile.TelescopeSettings.FocalLength,
+                MaxObjects = profileService.ActiveProfile.PlateSolveSettings.MaxObjects,
+                PixelSize = profileService.ActiveProfile.CameraSettings.PixelSize,
+                Regions = profileService.ActiveProfile.PlateSolveSettings.Regions,
+                SearchRadius = profileService.ActiveProfile.PlateSolveSettings.SearchRadius,
+                BlindFailoverEnabled = false
+            };
+
+            PlateSolveResult plateSolveResult;
+            Logger.Debug("Start Solve with a timeout of " + TimeSpan.FromSeconds(TimeOutSeconds));
+
+            using (var cts1 = new CancellationTokenSource(TimeSpan.FromSeconds(TimeOutSeconds))) {
+                try {
+                    plateSolveResult = await plateSolver.SolveAsync(CroppedImageData, param, progress, cts1.Token);
+                    if (plateSolveResult.Success) {
+                        string ContraDriftSolveRa = "SOLVERA";
+                        double ContraDriftSolveRaValue = plateSolveResult.Coordinates.RA;
+
+                        CroppedImageData.MetaData.GenericHeaders.Add(new DoubleMetaDataHeader(ContraDriftSolveRa, ContraDriftSolveRaValue, string.Format("Contradrift platesolve RA HourAngle")));
+
+                        string ContraDriftSolveDEC = "SOLVEDEC";
+                        double ContraDriftSolveDECValue = plateSolveResult.Coordinates.Dec;
+
+
+                        CroppedImageData.MetaData.GenericHeaders.Add(new DoubleMetaDataHeader(ContraDriftSolveDEC, ContraDriftSolveDECValue, string.Format("Contradrift platesolve DEC value in degrees.")));
+                        //croppedImage.MetaData.GenericHeaders.Add(new DoubleMetaDataHeader(ContraDriftSolveDEC, ContraDriftSolveDECValue, string.Format("Contradrift platesolve DEC value in unknown units.")));
+                        Logger.Info("Plate Solve complete.  Dec: " + ContraDriftSolveDECValue.ToString() + " RA: " + ContraDriftSolveRaValue.ToString());
+
+                        //this.telescopeMediator.SetCustomTrackingRate(SiderealShiftTrackingRate.Create(0.0, 0.0));
+                    } else {
+                        Logger.Error("Plate Solve Failed!!");
+                    }
+                } catch (OperationCanceledException) {
+                    // Handle the timeout exception
+                    Logger.Error("Platesolve did not return within" + TimeOutSeconds + " Seconds.");
+                }
+            }
+
+            //plateSolveResult = await this.plateSolver.SolveAsync(croppedImage, param, progress, dummyCancellationSource.Token);
+            Logger.Debug("Complete headers and return");
+
+
+
+            Logger.Debug("Filename:" + e.PathToImage.LocalPath);
             string newfilename = Path.Combine(
                 Path.GetDirectoryName(e.PathToImage.LocalPath),
                 "center", 
@@ -144,30 +190,19 @@ namespace NINA.Contradrift {
 
             if (!Directory.Exists(Path.GetDirectoryName(newfilename))) { Directory.CreateDirectory(Path.GetDirectoryName(newfilename)); }
 
-
-            //IImageData rawData;
-            //rawData = CroppedImageData;
-
-            //CroppedImageData.MetaData = e.MetaData;
-            //e.MetaData.GenericHeaders.ForEach
             foreach (var header in e.MetaData.GenericHeaders.ToList()) { 
-                Logger.Debug(header.ToString());
+                //Logger.Debug(header.ToString());
                 CroppedImageData.MetaData.GenericHeaders.Add(header);
             }
 
-            //CroppedImageData.MetaData.GenericHeaders.Add(e.MetaData);
 
-            //CroppedImageData.MetaData.GenericHeaders.Add(new DoubleMetaDataHeader(ContraDriftSolveDEC, ContraDriftSolveDECValue, string.Format("Contradrift platesolve DEC value in unknown units.")));
-
-
-
-            Logger.Debug("Image loaded: " + CroppedImageData.Properties.Width + " x " + CroppedImageData.Properties.Height);
+            Logger.Info("Image loaded: " + CroppedImageData.Properties.Width + " x " + CroppedImageData.Properties.Height);
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeOutSeconds));
             await CroppedImageData.SaveToDisk(FileSaveInfo, cts.Token);
-
+            
             File.Move(tmpfilename + ".fits", newfilename);
+            //return Task.CompletedTask;
 
-            return;
             //            throw new NotImplementedException();
         }
 
@@ -257,65 +292,14 @@ namespace NINA.Contradrift {
         }
 
 
-        private async Task ImageSaveMediator_BeforeImageSaved(object sender, BeforeImageSavedEventArgs e) {
+        private async Task<Task> ImageSaveMediator_BeforeImageSaved(object sender, BeforeImageSavedEventArgs e) {
 
-            // contradrift
+            Logger.Info("Start Crop down to " + CropSize + " square.");
+             
+            CroppedImageData = Crop(e.Image, (e.Image.Properties.Width - CropSize) / 2, (e.Image.Properties.Height - CropSize) / 2, CropSize, CropSize);
 
-            PlateSolveParameter param = new PlateSolveParameter() {
-                Binning = 1,
-                Coordinates = telescopeMediator.GetCurrentPosition(),
-                DownSampleFactor = 1,
-                FocalLength = profileService.ActiveProfile.TelescopeSettings.FocalLength,
-                MaxObjects = profileService.ActiveProfile.PlateSolveSettings.MaxObjects,
-                PixelSize = profileService.ActiveProfile.CameraSettings.PixelSize,
-                Regions = profileService.ActiveProfile.PlateSolveSettings.Regions,
-                SearchRadius = profileService.ActiveProfile.PlateSolveSettings.SearchRadius,
-                BlindFailoverEnabled = false
-            };
+            return Task.CompletedTask;
 
-            PlateSolveResult plateSolveResult;
-
-            // 9576  x 6388
-            //var TimeOutSeconds = 1;
-            Logger.Debug("Start Crop down to " + CropSize + " square.");
-
-            var croppedImage = Crop(e.Image, (e.Image.Properties.Width - CropSize) / 2, (e.Image.Properties.Height - CropSize) / 2, CropSize, CropSize);
-            
-
-            Logger.Debug("Start Solve with a timeout of " + TimeSpan.FromSeconds(TimeOutSeconds));
-
-            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeOutSeconds))) {
-                try {
-                    plateSolveResult = await this.plateSolver.SolveAsync(croppedImage, param, progress, cts.Token);
-                    if (plateSolveResult.Success) {
-                        string ContraDriftSolveRa = "SOLVERA";
-                        double ContraDriftSolveRaValue = plateSolveResult.Coordinates.RA;
-
-                        e.Image.MetaData.GenericHeaders.Add(new DoubleMetaDataHeader(ContraDriftSolveRa, ContraDriftSolveRaValue, string.Format("Contradrift platesolve RA HourAngle")));
-
-                        string ContraDriftSolveDEC = "SOLVEDEC";
-                        double ContraDriftSolveDECValue = plateSolveResult.Coordinates.Dec;
-
-
-                        e.Image.MetaData.GenericHeaders.Add(new DoubleMetaDataHeader(ContraDriftSolveDEC, ContraDriftSolveDECValue, string.Format("Contradrift platesolve DEC value in unknown units.")));
-                        //croppedImage.MetaData.GenericHeaders.Add(new DoubleMetaDataHeader(ContraDriftSolveDEC, ContraDriftSolveDECValue, string.Format("Contradrift platesolve DEC value in unknown units.")));
-
-                        //this.telescopeMediator.SetCustomTrackingRate(SiderealShiftTrackingRate.Create(0.0, 0.0));
-                    } else {
-                        Logger.Error("Plate Solve Failed!!");
-                    }
-                } catch (OperationCanceledException) {
-                    // Handle the timeout exception
-                    Logger.Error("Platesolve did not return within" + TimeOutSeconds + " Seconds.");
-                }
-            }
-            
-            plateSolveResult = await this.plateSolver.SolveAsync(croppedImage, param, progress, dummyCancellationSource.Token);
-            Logger.Debug("Complete headers and return");
-
-            CroppedImageData = croppedImage;
-
-            return;
         }
 
         public IImageData Crop(IImageData sourceImage, int x, int y, int width, int height) {
