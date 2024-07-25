@@ -38,6 +38,7 @@ using Accord.IO;
 using NINA.Image.FileFormat.FITS;
 using NINA.Image.FileFormat;
 using System.IO;
+using Nito.Mvvm;
 
 
 namespace NINA.Contradrift {
@@ -121,7 +122,7 @@ namespace NINA.Contradrift {
         }
 
         private async void ImageSaveMediator_ImageSaved(object sender, ImageSavedEventArgs e) {
-
+            /*
             PlateSolveParameter param = new PlateSolveParameter() {
                 Binning = 1,
                 Coordinates = telescopeMediator.GetCurrentPosition(),
@@ -204,6 +205,7 @@ namespace NINA.Contradrift {
             //return Task.CompletedTask;
 
             //            throw new NotImplementedException();
+            */
         }
 
         public override Task Teardown() {
@@ -295,9 +297,33 @@ namespace NINA.Contradrift {
         private async Task<Task> ImageSaveMediator_BeforeImageSaved(object sender, BeforeImageSavedEventArgs e) {
 
             Logger.Info("Start Crop down to " + CropSize + " square.");
-             
-            CroppedImageData = Crop(e.Image, (e.Image.Properties.Width - CropSize) / 2, (e.Image.Properties.Height - CropSize) / 2, CropSize, CropSize);
+            string newfilename = Path.Combine(
+                Path.GetDirectoryName(CropPath),
+                DateTime.Now.ToString("yyyyMMddTHHmmss"),
+                 ".fits"
+            );
+            Logger.Info("New Filename:" + newfilename);
 
+            string tmpfilename = Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString());
+            Logger.Info("Temp Filename:" + tmpfilename);
+
+            var FileSaveInfo = new FileSaveInfo {
+                FilePath = tmpfilename,
+                FileType = Core.Enum.FileTypeEnum.FITS,
+                FilePattern = ""
+            };
+
+            if (!Directory.Exists(Path.GetDirectoryName(newfilename))) { Directory.CreateDirectory(Path.GetDirectoryName(newfilename)); }
+
+            foreach (var header in e.Image.MetaData.GenericHeaders.ToList()) {
+                //Logger.Debug(header.ToString());
+                CroppedImageData.MetaData.GenericHeaders.Add(header);
+            }
+            CroppedImageData = Crop(e.Image, (e.Image.Properties.Width - CropSize) / 2, (e.Image.Properties.Height - CropSize) / 2, CropSize, CropSize);
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeOutSeconds));
+            await CroppedImageData.SaveToDisk(FileSaveInfo, cts.Token);
+
+            File.Move(tmpfilename + ".fits", newfilename);
             return Task.CompletedTask;
 
         }
@@ -337,7 +363,7 @@ namespace NINA.Contradrift {
                 Value = $"{DateTime.Now:yyyy-MM-ddTHH:mm:ss.ffffffK}"
             });
 
-            return Task.CompletedTask;
+            return Task.CompletedTask; 
         }
 
         public string DefaultNotificationMessage {
@@ -361,14 +387,20 @@ namespace NINA.Contradrift {
             }
         }
         private void InitializeOptions() {
-//            CropSize = pluginSettings.GetValueInt32("CropSize", 1024);
-//            TimeOutSeconds = pluginSettings.GetValueSingle("TimeOutSeconds", (Single)1.0);
+            RaisePropertyChanged(nameof(CropPath));
+            RaisePropertyChanged(nameof(CropSize));
+            RaisePropertyChanged(nameof(TimeOutSeconds));
 
+//            CropSize = pluginSettings.GetValueInt32("CropSize", 1024);
+//            CropPath = pluginSettings.GetValueString("CropPath", System.IO.Path.GetTempPath());
+//            TimeOutSeconds = pluginSettings.GetValueSingle("TimeOutSeconds", (Single)1.0);
+            
         }
 
         public void ResetDefaults() {
             CropSize = 1024;
             TimeOutSeconds = (Single)1.0;
+            CropPath = (String) System.IO.Path.GetTempPath();
             RaisePropertyChanged();
 
         }
@@ -382,12 +414,23 @@ namespace NINA.Contradrift {
                 RaisePropertyChanged();
             }
         }
+        public String CropPath {
+            get {
+                return pluginSettings.GetValueString(nameof(CropSize), "");
+            }
+            set {
+                pluginSettings.SetValueString(nameof(CropSize), value);
+
+                RaisePropertyChanged();
+            }
+        }
         public Single TimeOutSeconds {
             get {
                 return pluginSettings.GetValueSingle(nameof(TimeOutSeconds), (Single)1.0);
             }
             set {
                 pluginSettings.SetValueSingle(nameof(TimeOutSeconds), value);
+
                 RaisePropertyChanged();
             }
         }

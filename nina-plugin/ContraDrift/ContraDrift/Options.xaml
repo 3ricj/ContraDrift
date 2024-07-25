@@ -22,6 +22,32 @@
                 <TextBlock Width="135"
                                HorizontalAlignment="Right"
                                VerticalAlignment="Center">
+                    <TextBlock.Text>Crop Path</TextBlock.Text>
+                    <TextBlock.ToolTip>The path to store the Cropped images.</TextBlock.ToolTip>
+                </TextBlock>
+                <TextBox MinWidth="50" Margin="35,0,0,0" VerticalAlignment="Center" Text="{Binding CropPath}" />
+                <Button
+                    Grid.Row="3"
+                    Grid.Column="2"
+                    Width="20"
+                    Height="20"
+                    Margin="5,0,0,0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Command="{Binding DataContext.OpenImageFileDiagCommand, ElementName=UC}">
+                    <Path
+                        Margin="2,10,2,0"
+                        Data="{StaticResource DotsSVG}"
+                        Fill="{StaticResource ButtonForegroundBrush}"
+                        Stretch="Uniform"
+                        UseLayoutRounding="True" />
+                </Button>
+            </StackPanel>
+
+            <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
+                <TextBlock Width="135"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center">
                     <TextBlock.Text>Plate Solve Timeout:</TextBlock.Text>
                     <TextBlock.ToolTip>This is the the timeout sent to the platesolver.</TextBlock.ToolTip>
                 </TextBlock>
@@ -31,8 +57,8 @@
                 <TextBlock Width="135"
                                HorizontalAlignment="Right"
                                VerticalAlignment="Center">
-                    
-                    
+
+
                 </TextBlock>
                 <Button
                         Margin="5"
@@ -45,32 +71,6 @@
                         Text="Reset Defaults"
                         TextWrapping="Wrap" />
                 </Button>
-            </StackPanel>
-
-         
-            <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
-                <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
-                    <TextBlock Width="135"
-                               HorizontalAlignment="Right"
-                               VerticalAlignment="Center">
-                    </TextBlock>
-                    <Button
-                        Margin="5"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Command="{Binding BenchMarkCommand}">
-                        <TextBlock
-                        Margin="10,5,10,5"
-                        Foreground="{StaticResource ButtonForegroundBrush}"
-                        Text="Run Benchmark"
-                        TextWrapping="Wrap" />
-                    </Button>
-                </StackPanel>
-            </StackPanel>
-            <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
-                <TextBox Name="BenchMarkLogTextBox" Width="200" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" IsReadOnly="False" Text="{Binding BenchmarkLog, Mode=OneWay}"></TextBox>
-                
-
             </StackPanel>
 
         </StackPanel>
