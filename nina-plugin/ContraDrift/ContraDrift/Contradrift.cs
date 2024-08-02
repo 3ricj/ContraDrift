@@ -297,14 +297,18 @@ namespace NINA.Contradrift {
         private async Task<Task> ImageSaveMediator_BeforeImageSaved(object sender, BeforeImageSavedEventArgs e) {
 
             Logger.Info("Start Crop down to " + CropSize + " square.");
+
+            if (CropPath=="") { CropPath = System.IO.Path.GetTempPath(); }
+
+            Logger.Info("Crop Path: " + CropPath);
+
             string newfilename = Path.Combine(
                 Path.GetDirectoryName(CropPath),
-                DateTime.Now.ToString("yyyyMMddTHHmmss"),
-                 ".fits"
+                DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".fits"
             );
             Logger.Info("New Filename:" + newfilename);
 
-            string tmpfilename = Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString());
+            string tmpfilename = Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString() );
             Logger.Info("Temp Filename:" + tmpfilename);
 
             var FileSaveInfo = new FileSaveInfo {
@@ -316,12 +320,14 @@ namespace NINA.Contradrift {
             if (!Directory.Exists(Path.GetDirectoryName(newfilename))) { Directory.CreateDirectory(Path.GetDirectoryName(newfilename)); }
 
             foreach (var header in e.Image.MetaData.GenericHeaders.ToList()) {
-                //Logger.Debug(header.ToString());
-                CroppedImageData.MetaData.GenericHeaders.Add(header);
+                Logger.Debug(header.Key.ToString() + ":" + header.ToString());
+                //CroppedImageData.MetaData.GenericHeaders.Add(header);
             }
+            
             CroppedImageData = Crop(e.Image, (e.Image.Properties.Width - CropSize) / 2, (e.Image.Properties.Height - CropSize) / 2, CropSize, CropSize);
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeOutSeconds));
             await CroppedImageData.SaveToDisk(FileSaveInfo, cts.Token);
+            Thread.Sleep(200);
 
             File.Move(tmpfilename + ".fits", newfilename);
             return Task.CompletedTask;
