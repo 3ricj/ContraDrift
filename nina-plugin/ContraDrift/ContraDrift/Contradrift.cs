@@ -39,6 +39,7 @@ using NINA.Image.FileFormat.FITS;
 using NINA.Image.FileFormat;
 using System.IO;
 using Nito.Mvvm;
+using Xceed.Wpf.Toolkit.PropertyGrid.Attributes;
 
 
 namespace NINA.Contradrift {
@@ -299,13 +300,21 @@ namespace NINA.Contradrift {
             Logger.Info("Start Crop down to " + CropSize + " square.");
 
             if (CropPath=="") { CropPath = System.IO.Path.GetTempPath(); }
-
             Logger.Info("Crop Path: " + CropPath);
 
-            string newfilename = Path.Combine(
+            var patternTemplate = profileService.ActiveProfile.ImageFileSettings.GetFilePattern(e.Image.MetaData.Image.ImageType);
+            var filepath = profileService.ActiveProfile.ImageFileSettings.FilePath;
+            var imagePatterns = e.Image.GetImagePatterns();
+            var ExistingFileName = Path.Combine(filepath, imagePatterns.GetImageFileString(patternTemplate) + ".fits");
+            var newfilename = Path.GetDirectoryName(ExistingFileName) + "/crop/" + Path.GetFileName(ExistingFileName);
+
+
+
+            /*string newfilename = Path.Combine(
                 Path.GetDirectoryName(CropPath),
                 DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".fits"
-            );
+            ); */
+
             Logger.Info("New Filename:" + newfilename);
 
             string tmpfilename = Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString() );
@@ -316,7 +325,7 @@ namespace NINA.Contradrift {
                 FileType = Core.Enum.FileTypeEnum.FITS,
                 FilePattern = ""
             };
-
+             
             if (!Directory.Exists(Path.GetDirectoryName(newfilename))) { Directory.CreateDirectory(Path.GetDirectoryName(newfilename)); }
 
             foreach (var header in e.Image.MetaData.GenericHeaders.ToList()) {
@@ -404,7 +413,7 @@ namespace NINA.Contradrift {
         }
 
         public void ResetDefaults() {
-            CropSize = 1024;
+            CropSize = 1600;
             TimeOutSeconds = (Single)1.0;
             CropPath = (String) System.IO.Path.GetTempPath();
             RaisePropertyChanged();
@@ -413,7 +422,7 @@ namespace NINA.Contradrift {
 
         public int CropSize {
             get {
-                return pluginSettings.GetValueInt32(nameof(CropSize), 1024);
+                return pluginSettings.GetValueInt32(nameof(CropSize), 1600);
             }
             set {
                 pluginSettings.SetValueInt32(nameof(CropSize), value);

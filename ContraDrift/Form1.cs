@@ -638,20 +638,23 @@ namespace ContraDrift
 
             Plate p = new Plate();
             try {
-                //Thread.Sleep(100);
+                Thread.Sleep(100);
 
                 p.AttachFITS(InputFilename);
 
+                /*
                 double SolveRa = Convert.ToDouble(p.ReadFITSValue("SOLVERA"));
                 double SolveDec = Convert.ToDouble(p.ReadFITSValue("SOLVEDEC"));
                 if (!SolveRa.Equals(0.0) && !SolveDec.Equals(0.0))
                 {
                     log.Info("Using existing SolveRa and SolveDec from header");
                     return (true, SolveRa, SolveDec, (p.ExposureStartTime).ToLocalTime(), 0, 0, 0, 0, 0);
-                }
-
+                } */
+                //log.Debug("fits header DATE-LOC:" + p.ReadFITSValue("DATE-LOC"));  // note that DatetimeParse on DATE-LOC doesn't work.. not sure why? lack of timezone? 
                 p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
                 p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
+                log.Debug("p.ArcsecPerPixelHoriz:" + p.ArcsecPerPixelHoriz);
+                log.Debug("p.ArcsecPerPixelVert:" + p.ArcsecPerPixelVert);
                 if (LastPlateRa == -1) { p.RightAscension = p.TargetRightAscension; } else { p.RightAscension = LastPlateRa; }
                 if (LastPlateDec == -1) { p.Declination = p.TargetDeclination; } else { p.Declination = LastPlateDec; }
                 //p.MaxSolveTime = 10;
@@ -918,6 +921,7 @@ namespace ContraDrift
             {
                 xlWorkSheet.Cells[1, j + 1] = dataGridView1.Columns[j].HeaderText.ToString();
             }
+            
         }
         private string ExcelSave() {
             string Filename = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + Path.DirectorySeparatorChar + "ContraDriftLog" + Path.DirectorySeparatorChar + DateTime.Now.ToString("yyyy -MM-dd HHMMss") + " - ContraDrift.xlsx";
@@ -1131,6 +1135,11 @@ namespace ContraDrift
         {
             ExcelSave();
             SetupDataGridView();
+            
+            xlWorkBook.Close(false);
+            xlApp.Quit();
+            Marshal.ReleaseComObject(xlApp);
+
             SetupExcelWriter();
             ClearCharts();
 
