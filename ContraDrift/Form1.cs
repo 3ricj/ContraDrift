@@ -19,6 +19,8 @@ using System.Globalization;
 using Microsoft.Office.Interop.Excel;
 using System.Reflection;
 using System.Threading;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ContraDrift
 {
@@ -340,8 +342,8 @@ namespace ContraDrift
                 DateTime ExposureCenter;
 
                 string InputFilename = e.FullPath;
-                log.Debug("New File: " + InputFilename);
-                if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Error("not a fits file, not processing"); return; }
+                log.Trace("New File: " + InputFilename);
+                if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Trace("not a fits file, not processing"); return; }
 
                 (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime, double FitsRa, double FitsDec) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
 
@@ -633,82 +635,195 @@ namespace ContraDrift
 
             }
 
-
             Stopwatch.Restart();
+            log.Debug("Starting to solve: " + InputFilename);
 
-            Plate p = new Plate();
-            try {
+
+            var solver = "astap";
+
+            if (solver == "astap")
+            {
                 Thread.Sleep(100);
+                //Set a time-out value.
+                int timeOut = 3000;
+                //Get path to system folder.
+                
+                //Create a new process info structure.
+                ProcessStartInfo pInfo = new ProcessStartInfo(@"C:\Program Files\astap\astap_cli.exe");
+                //Set file name to open.
+                pInfo.FileName = @"C:\Program Files\astap\astap_cli.exe";
+                pInfo.RedirectStandardOutput = true;
+                pInfo.UseShellExecute = false;
+                pInfo.CreateNoWindow = true;
+                pInfo.Arguments = pInfo.Arguments + " -f \"" + InputFilename + "\"";
+                if (LastPlateRa != -1) { pInfo.Arguments = pInfo.Arguments + " -ra " + LastPlateRa.ToString(); }
+                if (LastPlateDec != -1) { pInfo.Arguments = pInfo.Arguments + " -spd " + (LastPlateDec + 90).ToString(); }
+                Process process = Process.Start(pInfo);
+                //                p.Start();
+                //                p.WaitForExit(timeOut);
 
-                p.AttachFITS(InputFilename);
+                string output = string.Empty;
+                Thread t = new Thread(() => output = process.StandardOutput.ReadToEnd());
+                t.Start();
+                //Wait for the process to exit or time out.
+                process.WaitForExit(timeOut);
 
-                /*
-                double SolveRa = Convert.ToDouble(p.ReadFITSValue("SOLVERA"));
-                double SolveDec = Convert.ToDouble(p.ReadFITSValue("SOLVEDEC"));
-                if (!SolveRa.Equals(0.0) && !SolveDec.Equals(0.0))
+                if (process.HasExited == false)
                 {
-                    log.Info("Using existing SolveRa and SolveDec from header");
-                    return (true, SolveRa, SolveDec, (p.ExposureStartTime).ToLocalTime(), 0, 0, 0, 0, 0);
-                } */
-                //log.Debug("fits header DATE-LOC:" + p.ReadFITSValue("DATE-LOC"));  // note that DatetimeParse on DATE-LOC doesn't work.. not sure why? lack of timezone? 
-                p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
-                p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
-                log.Debug("p.ArcsecPerPixelHoriz:" + p.ArcsecPerPixelHoriz);
-                log.Debug("p.ArcsecPerPixelVert:" + p.ArcsecPerPixelVert);
-                if (LastPlateRa == -1) { p.RightAscension = p.TargetRightAscension; } else { p.RightAscension = LastPlateRa; }
-                if (LastPlateDec == -1) { p.Declination = p.TargetDeclination; } else { p.Declination = LastPlateDec; }
-                //p.MaxSolveTime = 10;
-                p.Catalog = (CatalogType)11;
-                p.CatalogPath = settings.UCAC4_path;
-                p.CatalogExpansion = 0.4;
+                    process.Kill();
+                    log.Error("Platesolve timeout");
+                    return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
+                }
 
-                p.TraceLevel = 2;
-                p.TracePath = InputFilename + ".PlateSolveDebug";
-                if (!Directory.Exists(p.TracePath)) { Directory.CreateDirectory(p.TracePath); }
+                Console.WriteLine(output);
+                string Outfile = Path.Combine(Path.GetDirectoryName(InputFilename), Path.GetFileNameWithoutExtension(InputFilename) + ".ini");
+                if (!File.Exists(Outfile))
+                {
+                    log.Error("No output file from platesolve: " + Outfile);
+                    Console.WriteLine("No output file from platesolve: " + Outfile);
+                    return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
+                }
 
-                p.Solve();
-                PlateRa = p.RightAscension; // in hours
-                PlateDec = p.Declination;  // in degrees
-                //PlateLocaltime = p.ExposureStartTime;
-                //log.Debug("fits header DATE-LOC:" + p.ReadFITSValue("DATE-LOC"));  // note that DatetimeParse on DATE-LOC doesn't work.. not sure why? lack of timezone? 
-                //log.Debug("fits header DATE-OBS:" + p.ReadFITSValue("DATE-OBS"));
+                var dict = File.ReadLines(Outfile)
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .Select(line => line.Split(new char[] { '=' }, 2, 0))
+                .ToDictionary(parts => parts[0], parts => parts[1]);
+
+                dict.TryGetValue("WARNING", out var warning);
+
+                if (!dict.ContainsKey("PLTSOLVD") || dict["PLTSOLVD"] != "T")
+                {
+                    dict.TryGetValue("ERROR", out var error);
+                    log.Error($"ASTAP - Plate solve failed.{Environment.NewLine}{warning}{Environment.NewLine}{error}");
+                    return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
+                }
+
+                if (!string.IsNullOrWhiteSpace(warning))
+                {
+                    log.Info($"ASTAP - {warning}");
+                }
+
+
+                Solved = true;
+
+                PlateRa = double.Parse(dict["CRVAL1"], CultureInfo.InvariantCulture) / 15;  // In hours
+                PlateDec = double.Parse(dict["CRVAL2"], CultureInfo.InvariantCulture);      // in degrees
+                Console.WriteLine("RA:" + PlateRa.ToString());
+                Console.WriteLine("DEC:" + PlateDec.ToString());
+                // now look up other things to make the return happy. 
+
+                
+                Plate p = new Plate();
+                p.AttachFITS(InputFilename);
                 FitsRa = Convert.ToDouble(p.ReadFITSValue("RA")) / 15;
                 FitsDec = Convert.ToDouble(p.ReadFITSValue("DEC"));
                 PlateLocaltime = (p.ExposureStartTime).ToLocalTime();
                 PlateExposureTime = p.ExposureInterval;
                 Airmass = p.Airmass;
-                Solved = p.Solved;
-
-                //log.Info("Platesolve: {@InputFilename},{@RightAscension},{@PlateDec},{@PlateLocaltime},{@PlateExposureTime},{@AirMass},{@SolveTime},", InputFilename, PlateRa, PlateDec, PlateLocaltime, p.Airmass, stopwatch.ElapsedMilliseconds / 1000);
+                p.DetachFITS();
+                _ = Marshal.ReleaseComObject(p); // important or the com object leaks memory
+                
                 log.Info("Platesolve: Filename: " + InputFilename +
                     " PlateRa: " + PlateRa +
                     " PlateDec: " + PlateDec +
                     " PlateLocaltime: " + PlateLocaltime +
-                    " Airmass: " + p.Airmass +
+                    " Airmass: " + Airmass +
                     " FitsRa: " + FitsRa +
                     " FitsDec: " + FitsDec +
                     " Solvetime: " + (float)Stopwatch.ElapsedMilliseconds / 1000);
+                return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
 
             }
-            catch (Exception ex)
+            else if (solver == "pinpoint")
             {
-                log.Debug(ex);
-                _ = Marshal.ReleaseComObject(p);
-                return (false, 0, 0, DateTime.Now, 0, 0, 0, 0, 0);
 
+                Plate p = new Plate();
+                try {
+                    Thread.Sleep(100);
+
+                    p.AttachFITS(InputFilename);
+
+                    /*
+                    double SolveRa = Convert.ToDouble(p.ReadFITSValue("SOLVERA"));
+                    double SolveDec = Convert.ToDouble(p.ReadFITSValue("SOLVEDEC"));
+                    if (!SolveRa.Equals(0.0) && !SolveDec.Equals(0.0))
+                    {
+                        log.Info("Using existing SolveRa and SolveDec from header");
+                        return (true, SolveRa, SolveDec, (p.ExposureStartTime).ToLocalTime(), 0, 0, 0, 0, 0);
+                    } */
+                    //log.Debug("fits header DATE-LOC:" + p.ReadFITSValue("DATE-LOC"));  // note that DatetimeParse on DATE-LOC doesn't work.. not sure why? lack of timezone? 
+                    p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
+                    p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
+                    p.RemoveHotPixels(1);
+
+                    string color = p.ReadFITSValue("FILTER");
+                    if (color  == null) { log.Debug("Filter unknown"); p.ColorBand = FilterBand.ppUnknown; }
+                    if (color == "Luminance") { log.Debug("Filter Luminance"); p.ColorBand = FilterBand.ppVBand; }
+                    if (color == "Red") { log.Debug("Filter Red"); p.ColorBand = FilterBand.ppVBand; }
+                    if (color == "Green") { log.Debug("Filter Green"); p.ColorBand = FilterBand.ppBBand; }
+                    if (color == "Blue") { log.Debug("Filter Blue"); p.ColorBand = FilterBand.ppBBand; }
+                    if (color == "SII") { log.Debug("Filter SII"); p.ColorBand = FilterBand.ppRBand; } //  671.6
+                    if (color == "H-Alpha") { log.Debug("Filter H-Alpha"); p.ColorBand = FilterBand.ppRBand; }  // 656.28nm
+                    if (color == "OIII") { log.Debug("Filter OIII");  p.ColorBand = FilterBand.ppBBand; } //  495.9nm
+
+
+
+                    if (LastPlateRa == -1) { p.RightAscension = p.TargetRightAscension; } else { p.RightAscension = LastPlateRa; }
+                    if (LastPlateDec == -1) { p.Declination = p.TargetDeclination; } else { p.Declination = LastPlateDec; }
+                    //p.MaxSolveTime = 10;
+                    p.Catalog = (CatalogType)11;
+                    p.CatalogPath = settings.UCAC4_path;
+                    p.CatalogExpansion = 0.4;
+
+                    p.TraceLevel = 2;
+                    p.TracePath = InputFilename + ".PlateSolveDebug";
+                    if (!Directory.Exists(p.TracePath)) { Directory.CreateDirectory(p.TracePath); }
+
+                    p.Solve();
+                    PlateRa = p.RightAscension; // in hours
+                    PlateDec = p.Declination;  // in degrees
+                    //PlateLocaltime = p.ExposureStartTime;
+                    //log.Debug("fits header DATE-LOC:" + p.ReadFITSValue("DATE-LOC"));  // note that DatetimeParse on DATE-LOC doesn't work.. not sure why? lack of timezone? 
+                    //log.Debug("fits header DATE-OBS:" + p.ReadFITSValue("DATE-OBS"));
+                    FitsRa = Convert.ToDouble(p.ReadFITSValue("RA")) / 15;
+                    FitsDec = Convert.ToDouble(p.ReadFITSValue("DEC"));
+                    PlateLocaltime = (p.ExposureStartTime).ToLocalTime();
+                    PlateExposureTime = p.ExposureInterval;
+                    Airmass = p.Airmass;
+                    Solved = p.Solved;
+
+                    //log.Info("Platesolve: {@InputFilename},{@RightAscension},{@PlateDec},{@PlateLocaltime},{@PlateExposureTime},{@AirMass},{@SolveTime},", InputFilename, PlateRa, PlateDec, PlateLocaltime, p.Airmass, stopwatch.ElapsedMilliseconds / 1000);
+                    log.Info("Platesolve: Filename: " + InputFilename +
+                        " PlateRa: " + PlateRa +
+                        " PlateDec: " + PlateDec +
+                        " PlateLocaltime: " + PlateLocaltime +
+                        " Airmass: " + p.Airmass +
+                        " FitsRa: " + FitsRa +
+                        " FitsDec: " + FitsDec +
+                        " Solvetime: " + (float)Stopwatch.ElapsedMilliseconds / 1000);
+
+                }
+                catch (Exception ex)
+                {
+                    log.Debug(ex);
+                    _ = Marshal.ReleaseComObject(p);
+                    return (false, 0, 0, DateTime.Now, 0, 0, 0, 0, 0);
+
+                }
+
+
+                p.DetachFITS();
+                _ = Marshal.ReleaseComObject(p); // important or the com object leaks memory
+
+
+                Stopwatch.Stop();
+                //  (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) =  SolveFits(InputFilename);
+                return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
+
+           
             }
 
-
-            p.DetachFITS();
-            _ = Marshal.ReleaseComObject(p); // important or the com object leaks memory
-
-
-            Stopwatch.Stop();
-            //  (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) =  SolveFits(InputFilename);
             return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
-
-
-
         }
         //public Solves
         public struct Platesolve
