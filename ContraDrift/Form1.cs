@@ -79,6 +79,8 @@ namespace ContraDrift
         private double PlateRaPrevious = -1;
         private double PlateDecPrevious = -1;
 
+        double ScopeRa, ScopeDec;
+        double FitsRa, FitsDec;
 
         private double dt_sec;
 
@@ -188,6 +190,7 @@ namespace ContraDrift
 
         private void WatchFolderBrowseButton_Click(object sender, EventArgs e)
         {
+            folderBrowserDialog1.SelectedPath = settings.WatchFolder;
             folderBrowserDialog1.ShowDialog();
             textBox2.Text = folderBrowserDialog1.SelectedPath;
             settings.WatchFolder = textBox2.Text;
@@ -324,7 +327,6 @@ namespace ContraDrift
 
 
 
-                double ScopeRa, ScopeDec;
                 double ScopeRaRate, ScopeDecRate;
 
                 //Temp variables for filtered derivative RA PID
@@ -345,13 +347,28 @@ namespace ContraDrift
                 log.Trace("New File: " + InputFilename);
                 if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Trace("not a fits file, not processing"); return; }
 
-                (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime, double FitsRa, double FitsDec) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
+                (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime, double NewFitsRa, double NewFitsDec) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
 
 
 
                 double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
                 double PlateDecArcSec = PlateDec * 3600; // convert from degrees to arcsec
                 double PlateDecArcSecOld, PlateRaArcSecOld;
+
+                if (FitsRa != 0 && NewFitsRa !=0 && Math.Abs(NewFitsRa - FitsRa) > 0.001f 
+                   && FitsDec != 0 && NewFitsDec !=0 && Math.Abs(NewFitsDec - FitsDec) > 0.001f)
+                {
+                    log.Info("Position changed! Resetting All!");
+                    log.Debug("FitsRa: " + FitsRa + ",NewFitsRa: " + NewFitsRa + ",Delta:" + Math.Abs(NewFitsRa - FitsRa) +
+                        ",FitsDec: " + FitsDec + ",NewFitsDec: " + NewFitsDec + ",Delta:" + Math.Abs(NewFitsDec - FitsDec));
+                    framesOld = new FrameList(settings.BufferFitsCount);
+                    frames = new FrameList(settings.BufferFitsCount, framesOld);
+                    PropotionalJournal_RA = new LinkedList<double>();
+                    PropotionalJournal_DEC = new LinkedList<double>();
+                    FirstImage = true;
+                }
+                FitsRa = NewFitsRa;
+                FitsDec = NewFitsDec;
 
 
                 ScopeRa = telescope.RightAscension;
@@ -360,6 +377,7 @@ namespace ContraDrift
                 ScopeDecRate = telescope.DeclinationRate;
 
                 log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec + ",ScopeRaRate: " + ScopeRaRate + ",ScopeDecRate: " + ScopeDecRate);
+
 
                 if (!Solved) {
                     log.Error("Platesolved failed! ");
@@ -645,7 +663,7 @@ namespace ContraDrift
             {
                 Thread.Sleep(100);
                 //Set a time-out value.
-                int timeOut = 3000;
+                int timeOut = 5000;
                 //Get path to system folder.
                 
                 //Create a new process info structure.
