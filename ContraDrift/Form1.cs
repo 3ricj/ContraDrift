@@ -32,9 +32,12 @@ namespace ContraDrift
         BackgroundWorker worker = new BackgroundWorker();
         FileSystemWatcher watcher = new FileSystemWatcher();
         TaskFactory tFactory = new TaskFactory();
+        FitsManager fitsManager = new FitsManager();
 
         System.Data.DataTable datatable = new System.Data.DataTable();
-        Excel.Application xlApp;
+        //Excel.Application xlApp;
+        private Excel.Application xlApp = new Excel.Application();
+
         Excel.Workbook xlWorkBook;
         Excel.Worksheet xlWorkSheet;
 
@@ -45,6 +48,8 @@ namespace ContraDrift
         private Telescope telescope;
         private bool FirstImage = true;
 
+        Task<(bool Solved, double PlateRa, double PlateDec, float Solvetime)> plateSolveTask = null;
+        CancellationTokenSource solveCts = null;
 
         private double PID_previous_3rd_propotional_RA = 0;
         private double PID_previous_propotional_RA = 0;
@@ -93,8 +98,7 @@ namespace ContraDrift
         private System.Diagnostics.Stopwatch Stopwatch = new System.Diagnostics.Stopwatch();
 
 
-
-
+        
 
         public Form1()
         {
@@ -147,7 +151,7 @@ namespace ContraDrift
             var config = new NLog.Config.LoggingConfiguration();
 
             // Targets where to log to: File and Console
-            var logfile = new NLog.Targets.FileTarget("logfile") { FileName = "${specialfolder:folder=MyDocuments}\\ContraDriftLog\\ContraDriftLog-${date:format=yyyy-MM-dd}.txt" };
+            var logfile = new NLog.Targets.FileTarget("logfile") { FileName = "${specialfolder:folder=MyDocuments}\\ContraDriftLog\\ContraDriftLog-${date:format=yyyy-MM-dd}-${processid}.txt" };
             var logconsole = new NLog.Targets.ConsoleTarget("logconsole");
             //var logbox = new NLog.Targets
 
@@ -259,8 +263,11 @@ namespace ContraDrift
                 watcher.EnableRaisingEvents = false;
                 watcher.Dispose();
 
-                telescope.RightAscensionRate = 0;
-                telescope.DeclinationRate = 0;
+                if (telescope.Tracking) { 
+                    telescope.RightAscensionRate = 0;
+                    telescope.DeclinationRate = 0;
+                }
+
                 telescope.Connected = false;
                 telescope.Dispose();
                 ResetAll();
@@ -322,7 +329,7 @@ namespace ContraDrift
 
         void ProcessNewFits(object sender, FileSystemEventArgs e)
         {
-            _ = tFactory.StartNew(() =>
+            _ = tFactory.StartNew(async () =>
             {
 
 
@@ -347,28 +354,48 @@ namespace ContraDrift
                 log.Trace("New File: " + InputFilename);
                 if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Trace("not a fits file, not processing"); return; }
 
-                (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime, double NewFitsRa, double NewFitsDec) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
+                //(bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime, double NewFitsRa, double NewFitsDec) = SolveFits(InputFilename, PlateRaPrevious, PlateDecPrevious);
 
+                //fitsManager.PlateSolveAllAsync(InputFilename, PlateRaPrevious, PlateDecPrevious);
+                var newheaders =  fitsManager.ReadFitsHeader(InputFilename);
+                
 
+                // Set up new cancellation token for the next plate solve
+                solveCts = new CancellationTokenSource();
 
-                double PlateRaArcSec = PlateRa * 15 * 3600; // convert from hours to arcsec
-                double PlateDecArcSec = PlateDec * 3600; // convert from degrees to arcsec
+                // Start plate solving for the current file
+                plateSolveTask = fitsManager.PlateSolveAllAsync(InputFilename, solveCts.Token);
+
+                // Log the result of the completed solve task
+                var solveResult = await plateSolveTask;
+
+                if (solveResult.Solved)
+                {
+                    log.Info($"Plate solve succeeded for file: {InputFilename}. RA: {solveResult.PlateRa}, DEC: {solveResult.PlateDec}");
+                }
+                else
+                {
+                    log.Warn($"Plate solve failed for file: {InputFilename}");
+                }
+
+                double PlateRaArcSec = solveResult.PlateRa * 15 * 3600; // convert from hours to arcsec
+                double PlateDecArcSec = solveResult.PlateDec * 3600; // convert from degrees to arcsec
                 double PlateDecArcSecOld, PlateRaArcSecOld;
-
-                if (FitsRa != 0 && NewFitsRa !=0 && Math.Abs(NewFitsRa - FitsRa) > 0.001f 
-                   && FitsDec != 0 && NewFitsDec !=0 && Math.Abs(NewFitsDec - FitsDec) > 0.001f)
+                
+                if (FitsRa != 0 && newheaders.FitsRa != 0 && Math.Abs(newheaders.FitsRa - FitsRa) > 0.001f 
+                   && FitsDec != 0 && newheaders.FitsDec != 0 && Math.Abs(newheaders.FitsDec - FitsDec) > 0.001f)
                 {
                     log.Info("Position changed! Resetting All!");
-                    log.Debug("FitsRa: " + FitsRa + ",NewFitsRa: " + NewFitsRa + ",Delta:" + Math.Abs(NewFitsRa - FitsRa) +
-                        ",FitsDec: " + FitsDec + ",NewFitsDec: " + NewFitsDec + ",Delta:" + Math.Abs(NewFitsDec - FitsDec));
+                    log.Debug("FitsRa: " + FitsRa + ",NewFitsRa: " + newheaders.FitsRa + ",Delta:" + Math.Abs(newheaders.FitsRa - FitsRa) +
+                        ",FitsDec: " + FitsDec + ",NewFitsDec: " + newheaders.FitsDec + ",Delta:" + Math.Abs(newheaders.FitsDec - FitsDec));
                     framesOld = new FrameList(settings.BufferFitsCount);
                     frames = new FrameList(settings.BufferFitsCount, framesOld);
                     PropotionalJournal_RA = new LinkedList<double>();
                     PropotionalJournal_DEC = new LinkedList<double>();
                     FirstImage = true;
                 }
-                FitsRa = NewFitsRa;
-                FitsDec = NewFitsDec;
+                FitsRa = newheaders.FitsRa;
+                FitsDec = newheaders.FitsDec;
 
 
                 ScopeRa = telescope.RightAscension;
@@ -379,7 +406,7 @@ namespace ContraDrift
                 log.Debug("ScopeRa: " + ScopeRa + ",ScopeDec: " + ScopeDec + ",ScopeRaRate: " + ScopeRaRate + ",ScopeDecRate: " + ScopeDecRate);
 
 
-                if (!Solved) {
+                if (!solveResult.Solved) {
                     log.Error("Platesolved failed! ");
                     AddDataGridStruct(new DataGridElement
                     {
@@ -389,52 +416,57 @@ namespace ContraDrift
                     });
                     return; }
 
-                frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, PlateLocaltime, PlateExposureTime);
+               frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, newheaders.LocalTime, newheaders.ExposureTime);
+           
                 (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
+                PlateRaReference = newheaders.ObjectRa  * 3600;
+                PlateDecReference = newheaders.ObjectDec * 3600;
 
 
-
-                if (!framesOld.IsBufferFull()) {
+            if (!framesOld.IsBufferFull()) {
                     log.Debug("Buffer not full.. Buffer size: " + (framesOld.Count() + frames.Count()) + " Fullsize: " + settings.BufferFitsCount * 2);
                     //                    AddDataGridStruct(new DataGridElement { timestamp = DateTime.Now, filename = "test.fits", type = "test", dtsec = 5.222 });
 
                     if (frames.IsBufferFull() && FirstImage)
                     {
-                        PlateRaReference = PlateRaArcSec;
-                        PlateDecReference = PlateDecArcSec;
+                        PlateRaReference = newheaders.ObjectRa * 3600;
+                        PlateDecReference = newheaders.ObjectDec * 3600;
                         ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
-                        log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + PlateRa + " ,PlateDec: " + PlateDec + ",PlateLocaltime: " + PlateLocaltime + ",PlateExposureTime: " + PlateExposureTime);
+                        log.Debug("FirstImage:  ExposureCenter: " + ExposureCenter + ", PlateRa: " + solveResult.PlateRa + " ,PlateDec: " + solveResult.PlateDec + ",PlateLocaltime: " + newheaders.LocalTime + ",PlateExposureTime: " + newheaders.ExposureTime);
                         PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
-                        AddMessage("Reference image. ");
+                        AddMessage("Reference image. RaRef:" + PlateRaReference + " DecRef: " + PlateDecReference);
                         FirstImage = false;
                         AddDataGridStruct(new DataGridElement
                         {
-                            timestamp = PlateLocaltime,
+                            timestamp = newheaders.LocalTime,
                             filename = InputFilename,
                             type = "BUFFER-" + (framesOld.Count() + frames.Count()) + "-REF",
-                            exptime = PlateExposureTime,
-                            platera = PlateRa,
-                            platedec = PlateDec,
+                            exptime = newheaders.ExposureTime,
+                            filter = newheaders.Filter,
+                            platera = solveResult.PlateRa,
+                            platedec = solveResult.PlateDec,
                             plateraarcsecbuf = PlateRaReference,
                             platedecarcsecbuf = PlateDecReference,
                             fitsheaderra = FitsRa,
                             fitsheaderdec = FitsDec,
                             pendingmessage = PendingMessage
 
-                        });
+                        }); 
                     }
                     else
                     {
+                    
 
 
                         AddDataGridStruct(new DataGridElement
                         {
-                            timestamp = PlateLocaltime,
+                            timestamp = newheaders.LocalTime, 
                             filename = InputFilename,
                             type = "BUFFER-" + (framesOld.Count() + frames.Count()),
-                            exptime = PlateExposureTime,
-                            platera = PlateRa,
-                            platedec = PlateDec,
+                            exptime = newheaders.ExposureTime,
+                            filter = newheaders.Filter,
+                            platera = solveResult.PlateRa,
+                            platedec = solveResult.PlateDec,
                             fitsheaderra = FitsRa,
                             fitsheaderdec = FitsDec,
                             pendingmessage = PendingMessage
@@ -482,16 +514,17 @@ namespace ContraDrift
 
                     AddDataGridStruct(new DataGridElement
                     {
-                        timestamp = PlateLocaltime,
+                        timestamp = newheaders.LocalTime,
                         filename = InputFilename,
                         type = "PRECALC-" + PropotionalJournal_DEC.Count,
-                        exptime = PlateExposureTime,
+                        exptime = newheaders.ExposureTime,
+                        filter = newheaders.Filter,
                         dtsec = dt_sec,
-                        platera = PlateRa,
+                        platera = solveResult.PlateRa,
                         plateraarcsecbuf = PlateRaArcSec,
                         rap = PID_propotional_RA * dt_sec,
                         rai = PID_integral_RA,
-                        platedec = PlateDec,
+                        platedec = solveResult.PlateDec,
                         platedecarcsecbuf = PlateDecArcSec,
                         decp = PID_propotional_DEC * dt_sec,
                         deci = PID_integral_DEC,
@@ -552,18 +585,20 @@ namespace ContraDrift
 
                 AddDataGridStruct(new DataGridElement
                 {
-                    timestamp = PlateLocaltime,
+                    timestamp = newheaders.LocalTime,
                     filename = InputFilename,
                     type = "LIGHT",
-                    exptime = PlateExposureTime,
+//                    filter = newheaders.Filter,
+                    exptime = newheaders.ExposureTime,
+                    filter = newheaders.Filter,
                     dtsec = dt_sec,
-                    platera = PlateRa,
+                    platera = solveResult.PlateRa,
                     plateraarcsecbuf = PlateRaArcSec,
                     rap = PID_propotional_RA * dt_sec,
                     rai = PID_integral_RA,
                     rad = PID_derivative_RA,
                     newrarate = new_RA_rate,
-                    platedec = PlateDec,
+                    platedec = solveResult.PlateDec,
                     platedecarcsecbuf = PlateDecArcSec,
                     decp = PID_propotional_DEC * dt_sec,
                     deci = PID_integral_DEC,
@@ -575,7 +610,7 @@ namespace ContraDrift
                     fitsheaderra = FitsRa,
                     fitsheaderdec = FitsDec,
                     RateUpdateTimeStamp = DateTime.Now
-                });
+                }); ;
 
 
             }).ContinueWith(t =>
@@ -698,7 +733,6 @@ namespace ContraDrift
                 if (!File.Exists(Outfile))
                 {
                     log.Error("No output file from platesolve: " + Outfile);
-                    Console.WriteLine("No output file from platesolve: " + Outfile);
                     return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
                 }
 
@@ -935,6 +969,7 @@ namespace ContraDrift
             public string type;
             public string filename;
             public double exptime;
+            public string filter;
             public double dtsec;
             public double platera;
             public double plateraarcsecbuf;
@@ -966,6 +1001,7 @@ namespace ContraDrift
                 datagridelement.filename,
                 datagridelement.type,
                 datagridelement.exptime,
+                datagridelement.filter,
                 datagridelement.dtsec,
                 datagridelement.platera,
                 datagridelement.plateraarcsecbuf,
@@ -1018,6 +1054,7 @@ namespace ContraDrift
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Filename") + 1] = datagridelement.filename;
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Type") + 1] = datagridelement.type;
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("ExpTime") + 1] = datagridelement.exptime;
+                xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("Filter") + 1] = datagridelement.filter;
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("dt_sec") + 1] = datagridelement.dtsec;
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("PlateRa") + 1] = datagridelement.platera;
                 xlWorkSheet.Cells[i + 2, datatable.Columns.IndexOf("PlateRaArcSecBuf") + 1] = datagridelement.plateraarcsecbuf;
@@ -1047,7 +1084,7 @@ namespace ContraDrift
         }
         private void SetupExcelWriter() {
             object misValue = System.Reflection.Missing.Value;
-            xlApp = new Excel.Application();
+            //xlApp = new Excel.Application();
             xlWorkBook = xlApp.Workbooks.Add(misValue);
             xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
             for (int j = 0; j <= dataGridView1.ColumnCount - 1; j++)
@@ -1092,6 +1129,12 @@ namespace ContraDrift
             dataGridView1.Columns[datatable.Columns.IndexOf("ExpTime")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
             dataGridView1.Columns[datatable.Columns.IndexOf("ExpTime")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
             dataGridView1.Columns[datatable.Columns.IndexOf("ExpTime")].DefaultCellStyle.Format = "0.0";
+
+            datatable.Columns.Add(new DataColumn("Filter", typeof(String)));
+            dataGridView1.Columns[datatable.Columns.IndexOf("Filter")].AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells;
+            dataGridView1.Columns[datatable.Columns.IndexOf("Filter")].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+            dataGridView1.Columns[datatable.Columns.IndexOf("Filter")].SortMode = DataGridViewColumnSortMode.NotSortable;
+
 
             datatable.Columns.Add(new DataColumn("dt_sec", typeof(double)));
             dataGridView1.Columns[datatable.Columns.IndexOf("dt_sec")].SortMode = DataGridViewColumnSortMode.NotSortable;
@@ -1272,6 +1315,7 @@ namespace ContraDrift
             xlWorkBook.Close(false);
             xlApp.Quit();
             Marshal.ReleaseComObject(xlApp);
+            xlApp = new Excel.Application();
 
             SetupExcelWriter();
             ClearCharts();
