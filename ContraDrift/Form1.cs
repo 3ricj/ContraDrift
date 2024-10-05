@@ -358,11 +358,40 @@ namespace ContraDrift
 
                 //fitsManager.PlateSolveAllAsync(InputFilename, PlateRaPrevious, PlateDecPrevious);
                 var newheaders =  fitsManager.ReadFitsHeader(InputFilename);
-                
+
+                if (newheaders.ExposureTime < 0.1)
+                {
+                    log.Error("Exposure too short, skipping it.  ");
+                    AddDataGridStruct(new DataGridElement
+                    {
+                        timestamp = newheaders.LocalTime,
+                        filename = InputFilename,
+                        type = "SHORTFRAME",
+                        exptime = newheaders.ExposureTime,
+                        filter = newheaders.Filter
+
+                    });
+                    return;
+                }
+
+                if (plateSolveTask != null && !plateSolveTask.IsCompleted)
+                {
+                    log.Warn("Previous plate solve is still running. Cancelling it and moving on to the next file.");
+                    solveCts.Cancel(); // Cancel the previous plate solve
+                    try
+                    {
+                        await plateSolveTask; // Ensure proper cleanup of the task
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        log.Warn("Previous plate solve task was canceled.");
+                    }
+                }
+
 
                 // Set up new cancellation token for the next plate solve
                 solveCts = new CancellationTokenSource();
-
+//                solveCts.Cancel();
                 // Start plate solving for the current file
                 plateSolveTask = fitsManager.PlateSolveAllAsync(InputFilename, solveCts.Token);
 
@@ -410,13 +439,14 @@ namespace ContraDrift
                     log.Error("Platesolved failed! ");
                     AddDataGridStruct(new DataGridElement
                     {
-                        timestamp = DateTime.Now,
+                        timestamp = newheaders.LocalTime,
                         filename = InputFilename,
                         type = "SOLVEFAIL"
                     });
                     return; }
 
-               frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, newheaders.LocalTime, newheaders.ExposureTime);
+
+                frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, newheaders.LocalTime, newheaders.ExposureTime);
            
                 (PlateRaArcSec, PlateDecArcSec) = frames.GetPlateCollectionAverage();
                 PlateRaReference = newheaders.ObjectRa  * 3600;

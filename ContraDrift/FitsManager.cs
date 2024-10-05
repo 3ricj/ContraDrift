@@ -236,13 +236,18 @@ namespace ContraDrift
                 // Date and Time of Observation (DATE-OBS)
                 if (header.ContainsKey("DATE-LOC"))
                 {
-                    string dateObs = header.GetStringValue("DATE-LOC");
-                    if (DateTime.TryParse(dateObs, out DateTime observationTime))
+                    string dateLoc = header.GetStringValue("DATE-LOC");
+                    if (DateTime.TryParse(dateLoc, out DateTime observationTime))
                     {
-                        newheader.LocalTime = observationTime.ToLocalTime();
+                        //                        newheader.LocalTime = observationTime.ToLocalTime();
+                        TimeZoneInfo localTimeZone = TimeZoneInfo.Local;
+
+                        // Convert UTC to local time zone.
+                        DateTimeOffset localTime = TimeZoneInfo.ConvertTime(observationTime, localTimeZone);
+
+                        newheader.LocalTime = localTime.DateTime;
                     }
-                }
-                // Date and Time of Observation (DATE-OBS)
+                }                // Date and Time of Observation (DATE-OBS)
                 if (header.ContainsKey("DATE-OBS"))
                 {
                     string dateObs = header.GetStringValue("DATE-OBS");
