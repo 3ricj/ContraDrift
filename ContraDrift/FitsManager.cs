@@ -247,23 +247,28 @@ namespace ContraDrift
 
                         newheader.LocalTime = localTime.DateTime;
                     }
-                }                // Date and Time of Observation (DATE-OBS)
+                }
+                // Date and Time of Observation (DATE-OBS)
+
+                // Date and Time of Observation (DATE-OBS)
                 if (header.ContainsKey("DATE-OBS"))
                 {
                     string dateObs = header.GetStringValue("DATE-OBS");
                     if (DateTime.TryParse(dateObs, out DateTime observationTime))
                     {
-                        newheader.DateObs = observationTime.ToUniversalTime();
+                        newheader.DateObs = observationTime; // utcTime.DateTime;
                     }
                 }
+
                 if (header.ContainsKey("DATE-AVG"))
                 {
                     string dateObs = header.GetStringValue("DATE-AVG");
                     if (DateTime.TryParse(dateObs, out DateTime observationTime))
                     {
-                        newheader.DateAvg = observationTime.ToUniversalTime();
+                        newheader.DateAvg = observationTime;
                     }
                 }
+
 
                 // Airmass (AIRMASS)
                 if (header.ContainsKey("AIRMASS"))
