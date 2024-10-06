@@ -11,10 +11,8 @@ using PinPoint;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using nom.tam.fits;
 using nom.tam.util;
-using System.Runtime.InteropServices.ComTypes;
 
 
 
@@ -58,8 +56,20 @@ namespace ContraDrift
             public double PeirSide { get; set; }
         }
 
+        public class SolveResults
+        {
+            public bool Solved { get; set; } = false;
+            public double PlateRa { get; set; } = double.NaN;
+            public double PlateDec { get; set; } = double.NaN;
+            public string Filename { get; set; }
+            public string Solver { get; set; }
+            public float SolveTime { get; set; } = 0.0f;
+
+        }
+
         private static readonly Logger log = LogManager.GetCurrentClassLogger();
-        
+        // ReadFitsHeader method to extract key values from the FITS header file
+
         // Convert RA in 'H M S' format to degrees
         public static double ConvertRAtoDegrees(string ra)
         {
@@ -93,55 +103,11 @@ namespace ContraDrift
             return decDegrees;
         }
 
-        public static void WaitForFileAccess(string filePath, int retryInterval = 1000, int maxRetries = 10)
-        {
-            int retries = 0;
-            while (true)
-            {
-                try
-                {
-                    // Try to open the file for reading (shared mode)
-                    using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
-                    {
-                        // If successful, the file is ready to be accessed
-                        break;
-                    }
-                }
-                catch (IOException ex)
-                {
-                    // If the file is locked by another process, catch the IOException
-                    if (IsFileLocked(ex))
-                    {
-                        retries++;
-                        if (retries > maxRetries)
-                        {
-                            throw new Exception($"File {filePath} is still locked after {maxRetries} retries.");
-                        }
-                        Console.WriteLine($"File is locked. Retrying in {retryInterval}ms... (Attempt {retries}/{maxRetries})");
-                        Thread.Sleep(retryInterval);  // Wait before retrying
-                    }
-                    else
-                    {
-                        // If another IOException occurs, rethrow the exception
-                        throw;
-                    }
-                }
-            }
-        }
-        // Helper method to check if the file is locked by another process
-        private static bool IsFileLocked(IOException exception)
-        {
-            int errorCode = System.Runtime.InteropServices.Marshal.GetHRForException(exception) & ((1 << 16) - 1);
-            return errorCode == 32 || errorCode == 33; // ERROR_SHARING_VIOLATION or ERROR_LOCK_VIOLATION
-        }
-
-        // ReadFitsHeader method to extract key values from the FITS header file
         public FitsHeaders ReadFitsHeader(string inputFilename)
         {
             FitsHeaders newheader = new FitsHeaders();
             float timeOffset = 0;
 
-            WaitForFileAccess(inputFilename);
 
             Fits fits = null;
             BufferedFile bf = null;
@@ -249,8 +215,6 @@ namespace ContraDrift
                     }
                 }
                 // Date and Time of Observation (DATE-OBS)
-
-                // Date and Time of Observation (DATE-OBS)
                 if (header.ContainsKey("DATE-OBS"))
                 {
                     string dateObs = header.GetStringValue("DATE-OBS");
@@ -268,7 +232,6 @@ namespace ContraDrift
                         newheader.DateAvg = observationTime;
                     }
                 }
-
 
                 // Airmass (AIRMASS)
                 if (header.ContainsKey("AIRMASS"))
@@ -320,7 +283,7 @@ namespace ContraDrift
             return (newheader); // (solved, plateRa, plateDec, plateLocaltime, plateExposureTime, airmass, solvetime, fitsRa, fitsDec, filter);
         }
 
-        public async Task<(bool Solved, double PlateRa, double PlateDec, float Solvetime)> PlateSolveAllAsync(string filename, CancellationToken cancellationToken)
+        public async Task<SolveResults> PlateSolveAllAsync(string filename, CancellationToken cancellationToken)
         //       static async Task PlateSolveAllAsync(string filename, CancellationToken cancellationToken)
         {
             CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -333,8 +296,8 @@ namespace ContraDrift
             var parentDirectory = Directory.GetParent(Directory.GetParent(Path.GetFullPath(filename)).ToString()).ToString();
             var parentFilePath = Path.Combine(parentDirectory, Path.GetFileName(filename));
 
-            Task<(bool Solved, double PlateRa, double PlateDec, float Solvetime)> solveTask3 = null;
-            Task<(bool Solved, double PlateRa, double PlateDec, float Solvetime)> solveTask4 = null;
+            Task<SolveResults> solveTask3 = null;
+            Task<SolveResults> solveTask4 = null;
 
             if (File.Exists(parentFilePath))
             {
@@ -380,12 +343,12 @@ namespace ContraDrift
 
             // Dispose of the cancellation token source
             linkedCts.Dispose();
-            return (false, 0.0, 0.0, 0.0f);
+            return (new SolveResults());
         }
 
 
         // PlateSolveAstapAsync method with timeout and cancellation support
-        public async Task<(bool Solved, double PlateRa, double PlateDec, float Solvetime)>
+        public async Task<SolveResults>
             PlateSolvePinPointWrapperpAsync(string inputFilename, CancellationToken cancellationToken)
         {
             return await Task.Run(async () =>
@@ -403,7 +366,8 @@ namespace ContraDrift
                     if (!File.Exists(vppwExePath))
                     {
                         log.Error("VisualPinPointWrapper executable not found at: " + vppwExePath);
-                        return (false, 0, 0, 0);
+                        return new SolveResults { Solver = "PinPoint" };
+                        //                        return (false, 0, 0, 0, "PinPoint");
                     }
 
                     // Prepare process start info
@@ -433,20 +397,20 @@ namespace ContraDrift
                             // Process completed in time
                             if (process.ExitCode != 0)
                             {
-                                log.Error($"VisualPinPointWrapper plate solve failed. Exit Code: {process.ExitCode}. Error: {await process.StandardError.ReadToEndAsync()}");
-                                return (false, 0, 0, 0);
+                                log.Error($"PinPoint plate solve failed. Exit Code: {process.ExitCode}. Error: {await process.StandardError.ReadToEndAsync()}");
+                                return new SolveResults { Solver = "PinPoint" };
                             }
                         }
                         else
                         {
                             // Timeout or cancellation
-                            log.Warn("VisualPinPointWrapper plate solve timed out or was canceled.");
+                            log.Warn("PinPoint plate solve timed out or was canceled.");
                             if (!process.HasExited)
                             {
                                 process.Kill(); // Kill the process if it didn't exit within the timeout
                             }
 
-                            return (false, 0, 0, 0);
+                            return new SolveResults { Solver = "PinPoint" };
                         }
 
                         // Parse the VisualPinPointWrapper output file (.ini)
@@ -468,7 +432,7 @@ namespace ContraDrift
                             else
                             {
                                 log.Error("VisualPinPointWrapper plate solve failed, no solution found.");
-                                return (false, 0, 0, 0);
+                                return new SolveResults { Solver = "PinPoint" };
                             }
 
                             // Read additional data from the FITS file, like RA, DEC, exposure time, and airmass
@@ -488,7 +452,7 @@ namespace ContraDrift
                         else
                         {
                             log.Error($"VisualPinPointWrapper output file not found: {outputFilename}");
-                            return (false, 0, 0, 0);
+                            return new SolveResults { Solver = "PinPoint" };
                         }
                     }
 
@@ -497,20 +461,21 @@ namespace ContraDrift
                 catch (Exception ex)
                 {
                     log.Error(ex, "Error during VisualPinPointWrapper plate solving.");
-                    return (false, 0, 0, 0);
+                    return new SolveResults { Solver = "PinPoint" };
                 }
 
-                return (solved, plateRa, plateDec, (float)stopwatch.ElapsedMilliseconds / 1000);
+                //return (solved, plateRa, plateDec,  (float)stopwatch.ElapsedMilliseconds / 1000, "PinPoint");
+                return new SolveResults { Solved = solved, PlateRa = plateRa, PlateDec = plateDec, SolveTime = (float)stopwatch.ElapsedMilliseconds / 1000, Solver = "PinPoint" };
+
             }, cancellationToken);
         }
 
         // PlateSolveAstapAsync method with timeout and cancellation support
-        public async Task<(bool Solved, double PlateRa, double PlateDec, float Solvetime)>
-            PlateSolveAstapAsync(string inputFilename, CancellationToken cancellationToken)
+        public async Task<SolveResults> PlateSolveAstapAsync(string inputFilename, CancellationToken cancellationToken)
         {
             return await Task.Run(async () =>
             {
-                double plateRa = 0, plateDec = 0, fitsRa = 0, fitsDec = 0, plateExposureTime = 0, airmass = 0;
+                double plateRa = 0, plateDec = 0, fitsRa = 0, fitsDec = 0;
                 DateTime plateLocaltime = DateTime.Now;
                 bool solved = false;
                 Stopwatch stopwatch = new Stopwatch();
@@ -525,7 +490,7 @@ namespace ContraDrift
                     if (!File.Exists(astapExePath))
                     {
                         log.Error("ASTAP executable not found at: " + astapExePath);
-                        return (false, 0, 0, 0);
+                        return new SolveResults { Solver = "astap" };
                     }
 
                     // Prepare process start info
@@ -557,7 +522,7 @@ namespace ContraDrift
                             if (process.ExitCode != 0)
                             {
                                 log.Error($"ASTAP plate solve failed. Exit Code: {process.ExitCode}. Error: {await process.StandardError.ReadToEndAsync()}");
-                                return (false, 0, 0, 0);
+                                return new SolveResults { Solver = "astap" };
                             }
                         }
                         else
@@ -569,7 +534,7 @@ namespace ContraDrift
                                 process.Kill(); // Kill the process if it didn't exit within the timeout
                             }
 
-                            return (false, 0, 0, 0);
+                            return new SolveResults { Solver = "astap" };
                         }
 
                         // Parse the ASTAP output file (.ini)
@@ -591,7 +556,7 @@ namespace ContraDrift
                             else
                             {
                                 log.Error("ASTAP plate solve failed, no solution found.");
-                                return (false, 0, 0, 0);
+                                return new SolveResults { Solver = "astap" };
                             }
 
                             // Read additional data from the FITS file, like RA, DEC, exposure time, and airmass
@@ -601,17 +566,14 @@ namespace ContraDrift
 
                             fitsRa = plateRa;  // Example: using the same RA as result
                             fitsDec = plateDec; // Example: using the same DEC as result
-                            plateLocaltime = DateTime.Now;  // Placeholder, replace with actual FITS reading logic
-                            plateExposureTime = 10;  // Placeholder, replace with actual FITS reading logic
-                            airmass = 1.0;  // Placeholder, replace with actual FITS reading logic
                             log.Info("astap_solvetime=" + stopwatch.Elapsed);
 
-                            log.Info($"ASTAP plate solve succeeded. RA: {plateRa}, DEC: {plateDec}, ExposureTime: {plateExposureTime}, Airmass: {airmass}");
+                            log.Info($"ASTAP plate solve succeeded. RA: {plateRa}, DEC: {plateDec}");
                         }
                         else
                         {
                             log.Error($"ASTAP output file not found: {outputFilename}");
-                            return (false, 0, 0, 0);
+                            return new SolveResults { Solver = "astap" };
                         }
                     }
 
@@ -620,10 +582,11 @@ namespace ContraDrift
                 catch (Exception ex)
                 {
                     log.Error(ex, "Error during ASTAP plate solving.");
-                    return (false, 0, 0, 0);
+                    return new SolveResults { Solver = "astap" };
                 }
 
-                return (solved, plateRa, plateDec, (float)stopwatch.ElapsedMilliseconds / 1000);
+                return new SolveResults { Solved = solved, PlateRa = plateRa, PlateDec = plateDec, SolveTime = (float)stopwatch.ElapsedMilliseconds / 1000, Solver = "astap" };
+                //                return (solved, plateRa, plateDec,  (float)stopwatch.ElapsedMilliseconds / 1000, "astap");
             }, cancellationToken);
         }
     }

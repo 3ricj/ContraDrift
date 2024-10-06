@@ -48,7 +48,7 @@ namespace ContraDrift
         private Telescope telescope;
         private bool FirstImage = true;
 
-        Task<(bool Solved, double PlateRa, double PlateDec, float Solvetime)> plateSolveTask = null;
+        Task<FitsManager.SolveResults> plateSolveTask = null;
         CancellationTokenSource solveCts = null;
 
         private double PID_previous_3rd_propotional_RA = 0;
