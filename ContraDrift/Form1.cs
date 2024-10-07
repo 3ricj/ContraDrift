@@ -359,7 +359,7 @@ namespace ContraDrift
                 //fitsManager.PlateSolveAllAsync(InputFilename, PlateRaPrevious, PlateDecPrevious);
                 var newheaders =  fitsManager.ReadFitsHeader(InputFilename);
 
-                if (newheaders.ExposureTime < 0.1)
+                if (newheaders.ExposureTime < 1)
                 {
                     log.Error("Exposure too short, skipping it.  ");
                     AddDataGridStruct(new DataGridElement
@@ -441,7 +441,9 @@ namespace ContraDrift
                     {
                         timestamp = newheaders.LocalTime,
                         filename = InputFilename,
-                        type = "SOLVEFAIL"
+                        type = "SOLVEFAIL",
+                        filter = newheaders.Filter,
+                        exptime = newheaders.ExposureTime
                     });
                     return; }
 

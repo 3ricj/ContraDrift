@@ -103,10 +103,53 @@ namespace ContraDrift
             return decDegrees;
         }
 
+        public static void WaitForFileAccess(string filePath, int retryInterval = 1000, int maxRetries = 10)
+        {
+            int retries = 0;
+            while (true)
+            {
+                try
+                {
+                    // Try to open the file for reading (shared mode)
+                    using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+                    {
+                        // If successful, the file is ready to be accessed
+                        break;
+                    }
+                }
+                catch (IOException ex)
+                {
+                    // If the file is locked by another process, catch the IOException
+                    if (IsFileLocked(ex))
+                    {
+                        retries++;
+                        if (retries > maxRetries)
+                        {
+                            throw new Exception($"File {filePath} is still locked after {maxRetries} retries.");
+                        }
+                        Console.WriteLine($"File is locked. Retrying in {retryInterval}ms... (Attempt {retries}/{maxRetries})");
+                        Thread.Sleep(retryInterval);  // Wait before retrying
+                    }
+                    else
+                    {
+                        // If another IOException occurs, rethrow the exception
+                        throw;
+                    }
+                }
+            }
+        }
+        // Helper method to check if the file is locked by another process
+        private static bool IsFileLocked(IOException exception)
+        {
+            int errorCode = System.Runtime.InteropServices.Marshal.GetHRForException(exception) & ((1 << 16) - 1);
+            return errorCode == 32 || errorCode == 33; // ERROR_SHARING_VIOLATION or ERROR_LOCK_VIOLATION
+        }
+
         public FitsHeaders ReadFitsHeader(string inputFilename)
         {
             FitsHeaders newheader = new FitsHeaders();
             float timeOffset = 0;
+            WaitForFileAccess(inputFilename);
 
 
             Fits fits = null;
@@ -302,6 +345,7 @@ namespace ContraDrift
             if (File.Exists(parentFilePath))
             {
                 log.Info($"File found in parent directory: {parentFilePath}");
+                WaitForFileAccess(parentFilePath);
                 solveTask3 = Task.Run(() => PlateSolveAstapAsync(parentFilePath, linkedCts.Token));
                 solveTask4 = Task.Run(() => PlateSolvePinPointWrapperpAsync(parentFilePath, linkedCts.Token));
             }
