@@ -85,7 +85,7 @@ namespace ContraDrift
         private double PlateDecPrevious = -1;
 
         double ScopeRa, ScopeDec;
-        double FitsRa, FitsDec;
+        double ObsRa, ObsDec;
 
         private double dt_sec;
 
@@ -411,20 +411,20 @@ namespace ContraDrift
                 double PlateDecArcSec = solveResult.PlateDec * 3600; // convert from degrees to arcsec
                 double PlateDecArcSecOld, PlateRaArcSecOld;
                 
-                if (FitsRa != 0 && newheaders.FitsRa != 0 && Math.Abs(newheaders.FitsRa - FitsRa) > 0.001f 
-                   && FitsDec != 0 && newheaders.FitsDec != 0 && Math.Abs(newheaders.FitsDec - FitsDec) > 0.001f)
+                if (ObsRa != 0 && newheaders.ObjectRa != 0 && Math.Abs(newheaders.ObjectRa - ObsRa) > 0.001f
+                    && ObsDec != 0 && newheaders.ObjectDec != 0 && Math.Abs(newheaders.ObjectDec - ObsDec) > 0.001f)
                 {
                     log.Info("Position changed! Resetting All!");
-                    log.Debug("FitsRa: " + FitsRa + ",NewFitsRa: " + newheaders.FitsRa + ",Delta:" + Math.Abs(newheaders.FitsRa - FitsRa) +
-                        ",FitsDec: " + FitsDec + ",NewFitsDec: " + newheaders.FitsDec + ",Delta:" + Math.Abs(newheaders.FitsDec - FitsDec));
+                    log.Debug("ObjRa: " + ObsRa + ",NewObsRa: " + newheaders.ObjectRa + ",Delta:" + Math.Abs(newheaders.ObjectRa - ObsRa) +
+                        ",ObsDec: " + ObsDec + ",NewObsDec: " + newheaders.ObjectDec + ",Delta:" + Math.Abs(newheaders.ObjectDec - ObsDec));
                     framesOld = new FrameList(settings.BufferFitsCount);
                     frames = new FrameList(settings.BufferFitsCount, framesOld);
                     PropotionalJournal_RA = new LinkedList<double>();
                     PropotionalJournal_DEC = new LinkedList<double>();
                     FirstImage = true;
                 }
-                FitsRa = newheaders.FitsRa;
-                FitsDec = newheaders.FitsDec;
+                ObsRa = newheaders.ObjectRa;
+                ObsDec = newheaders.ObjectDec;
 
 
                 ScopeRa = telescope.RightAscension;
@@ -479,8 +479,8 @@ namespace ContraDrift
                             platedec = solveResult.PlateDec,
                             plateraarcsecbuf = PlateRaReference,
                             platedecarcsecbuf = PlateDecReference,
-                            fitsheaderra = FitsRa,
-                            fitsheaderdec = FitsDec,
+                            fitsheaderra = ObsRa,
+                            fitsheaderdec = ObsDec,
                             pendingmessage = PendingMessage
 
                         }); 
@@ -499,8 +499,8 @@ namespace ContraDrift
                             filter = newheaders.Filter,
                             platera = solveResult.PlateRa,
                             platedec = solveResult.PlateDec,
-                            fitsheaderra = FitsRa,
-                            fitsheaderdec = FitsDec,
+                            fitsheaderra = ObsRa,
+                            fitsheaderdec = ObsDec,
                             pendingmessage = PendingMessage
                         });
                     }
@@ -512,10 +512,9 @@ namespace ContraDrift
                 LastExposureCenter = framesOld.GetPlateCollectionLocalExposureTimeCenter();
                 ExposureCenter = frames.GetPlateCollectionLocalExposureTimeCenter();
 
-                log.Debug("ExposureCenter: " + ExposureCenter);
-                log.Debug("LastExposureCenter: " + LastExposureCenter);
                 dt_sec = ((ExposureCenter - LastExposureCenter).TotalMilliseconds) / 1000;
-                log.Debug("dt_sec: " + dt_sec);
+
+                log.Debug("ExposureCenter: " + ExposureCenter+ " LastExposureCenter: " + LastExposureCenter+ " dt_sec: " + dt_sec);
 
 
                 // PID control for RA
@@ -639,8 +638,8 @@ namespace ContraDrift
                     pendingmessage = PendingMessage,
                     scopera = ScopeRa,
                     scopedec = ScopeDec,
-                    fitsheaderra = FitsRa,
-                    fitsheaderdec = FitsDec,
+                    fitsheaderra = ObsRa,
+                    fitsheaderdec = ObsDec,
                     RateUpdateTimeStamp = DateTime.Now
                 }); ;
 
@@ -676,240 +675,7 @@ namespace ContraDrift
         {
             save_settings();
         }
-
-        public (bool, double, double, DateTime, double, double, float, double, double) SolveFits(string InputFilename, double LastPlateRa = -1, double LastPlateDec = -1)
-        {
-            double PlateRa = 0, PlateDec = 0, PlateExposureTime = 0;
-            DateTime PlateLocaltime = DateTime.Now;
-            double Airmass = 0;
-            float Solvetime = 0;
-            bool Solved = false;
-            float timeoffset = 0;
-            double FitsRa = 0, FitsDec = 0;
-
-
-
-            if (Path.GetExtension(InputFilename) != ".fitscsv" && Path.GetExtension(InputFilename) != ".fits") { log.Debug("Other file detected not processed: " + InputFilename); return (false, 0, 0, DateTime.Now, 0, 0, 0, 0, 0); }
-
-            if (Path.GetExtension(InputFilename) == ".fitscsv")
-            {
-
-                using (TextFieldParser csvParser = new TextFieldParser(InputFilename))
-                {
-                    csvParser.CommentTokens = new string[] { "#" };
-                    csvParser.SetDelimiters(new string[] { "," });
-                    csvParser.HasFieldsEnclosedInQuotes = true;
-
-                    // Skip the row with the column names
-                    csvParser.ReadLine();
-
-                    while (!csvParser.EndOfData)
-                    {
-
-                        string[] fields = csvParser.ReadFields();
-                        timeoffset = float.Parse(fields[0]);
-                        PlateRa = double.Parse(fields[1]) / 15;  //convert degrees into hour angles so the format is the same as the plate solver.
-                        PlateDec = double.Parse(fields[2]);
-                    }
-
-
-                }
-                log.Debug("Parsing fitscsv: " + InputFilename + ",timeoffset: " + timeoffset + ",PlateRa: " + PlateRa + ",PlateDec:" + PlateDec);
-
-                return (true, PlateRa, PlateDec, ProcessingStartDateTime.AddMonths(-1).AddSeconds(12 * dataGridView1.Rows.Count), 0, 0, 0, 0, 0);
-
-            }
-
-            Stopwatch.Restart();
-            log.Debug("Starting to solve: " + InputFilename);
-
-
-            var solver = "astap";
-
-            if (solver == "astap")
-            {
-                Thread.Sleep(100);
-                //Set a time-out value.
-                int timeOut = 5000;
-                //Get path to system folder.
-                
-                //Create a new process info structure.
-                ProcessStartInfo pInfo = new ProcessStartInfo(@"C:\Program Files\astap\astap_cli.exe");
-                //Set file name to open.
-                pInfo.FileName = @"C:\Program Files\astap\astap_cli.exe";
-                pInfo.RedirectStandardOutput = true;
-                pInfo.UseShellExecute = false;
-                pInfo.CreateNoWindow = true;
-                pInfo.Arguments = pInfo.Arguments + " -f \"" + InputFilename + "\"";
-                if (LastPlateRa != -1) { pInfo.Arguments = pInfo.Arguments + " -ra " + LastPlateRa.ToString(); }
-                if (LastPlateDec != -1) { pInfo.Arguments = pInfo.Arguments + " -spd " + (LastPlateDec + 90).ToString(); }
-                Process process = Process.Start(pInfo);
-                //                p.Start();
-                //                p.WaitForExit(timeOut);
-
-                string output = string.Empty;
-                Thread t = new Thread(() => output = process.StandardOutput.ReadToEnd());
-                t.Start();
-                //Wait for the process to exit or time out.
-                process.WaitForExit(timeOut);
-
-                if (process.HasExited == false)
-                {
-                    process.Kill();
-                    log.Error("Platesolve timeout");
-                    return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
-                }
-
-                Console.WriteLine(output);
-                string Outfile = Path.Combine(Path.GetDirectoryName(InputFilename), Path.GetFileNameWithoutExtension(InputFilename) + ".ini");
-                if (!File.Exists(Outfile))
-                {
-                    log.Error("No output file from platesolve: " + Outfile);
-                    return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
-                }
-
-                var dict = File.ReadLines(Outfile)
-                .Where(line => !string.IsNullOrWhiteSpace(line))
-                .Select(line => line.Split(new char[] { '=' }, 2, 0))
-                .ToDictionary(parts => parts[0], parts => parts[1]);
-
-                dict.TryGetValue("WARNING", out var warning);
-
-                if (!dict.ContainsKey("PLTSOLVD") || dict["PLTSOLVD"] != "T")
-                {
-                    dict.TryGetValue("ERROR", out var error);
-                    log.Error($"ASTAP - Plate solve failed.{Environment.NewLine}{warning}{Environment.NewLine}{error}");
-                    return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
-                }
-
-                if (!string.IsNullOrWhiteSpace(warning))
-                {
-                    log.Info($"ASTAP - {warning}");
-                }
-
-
-                Solved = true;
-
-                PlateRa = double.Parse(dict["CRVAL1"], CultureInfo.InvariantCulture) / 15;  // In hours
-                PlateDec = double.Parse(dict["CRVAL2"], CultureInfo.InvariantCulture);      // in degrees
-                Console.WriteLine("RA:" + PlateRa.ToString());
-                Console.WriteLine("DEC:" + PlateDec.ToString());
-                // now look up other things to make the return happy. 
-
-                
-                Plate p = new Plate();
-                p.AttachFITS(InputFilename);
-                FitsRa = Convert.ToDouble(p.ReadFITSValue("RA")) / 15;
-                FitsDec = Convert.ToDouble(p.ReadFITSValue("DEC"));
-                PlateLocaltime = (p.ExposureStartTime).ToLocalTime();
-                PlateExposureTime = p.ExposureInterval;
-                Airmass = p.Airmass;
-                p.DetachFITS();
-                _ = Marshal.ReleaseComObject(p); // important or the com object leaks memory
-                
-                log.Info("Platesolve: Filename: " + InputFilename +
-                    " PlateRa: " + PlateRa +
-                    " PlateDec: " + PlateDec +
-                    " PlateLocaltime: " + PlateLocaltime +
-                    " Airmass: " + Airmass +
-                    " FitsRa: " + FitsRa +
-                    " FitsDec: " + FitsDec +
-                    " Solvetime: " + (float)Stopwatch.ElapsedMilliseconds / 1000);
-                return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
-
-            }
-            else if (solver == "pinpoint")
-            {
-
-                Plate p = new Plate();
-                try {
-                    Thread.Sleep(100);
-
-                    p.AttachFITS(InputFilename);
-
-                    /*
-                    double SolveRa = Convert.ToDouble(p.ReadFITSValue("SOLVERA"));
-                    double SolveDec = Convert.ToDouble(p.ReadFITSValue("SOLVEDEC"));
-                    if (!SolveRa.Equals(0.0) && !SolveDec.Equals(0.0))
-                    {
-                        log.Info("Using existing SolveRa and SolveDec from header");
-                        return (true, SolveRa, SolveDec, (p.ExposureStartTime).ToLocalTime(), 0, 0, 0, 0, 0);
-                    } */
-                    //log.Debug("fits header DATE-LOC:" + p.ReadFITSValue("DATE-LOC"));  // note that DatetimeParse on DATE-LOC doesn't work.. not sure why? lack of timezone? 
-                    p.ArcsecPerPixelHoriz = (Convert.ToDouble(p.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
-                    p.ArcsecPerPixelVert = (Convert.ToDouble(p.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(p.ReadFITSValue("FOCALLEN"))) * 206.2648062;
-                    p.RemoveHotPixels(1);
-
-                    string color = p.ReadFITSValue("FILTER");
-                    if (color  == null) { log.Debug("Filter unknown"); p.ColorBand = FilterBand.ppUnknown; }
-                    if (color == "Luminance") { log.Debug("Filter Luminance"); p.ColorBand = FilterBand.ppVBand; }
-                    if (color == "Red") { log.Debug("Filter Red"); p.ColorBand = FilterBand.ppVBand; }
-                    if (color == "Green") { log.Debug("Filter Green"); p.ColorBand = FilterBand.ppBBand; }
-                    if (color == "Blue") { log.Debug("Filter Blue"); p.ColorBand = FilterBand.ppBBand; }
-                    if (color == "SII") { log.Debug("Filter SII"); p.ColorBand = FilterBand.ppRBand; } //  671.6
-                    if (color == "H-Alpha") { log.Debug("Filter H-Alpha"); p.ColorBand = FilterBand.ppRBand; }  // 656.28nm
-                    if (color == "OIII") { log.Debug("Filter OIII");  p.ColorBand = FilterBand.ppBBand; } //  495.9nm
-
-
-
-                    if (LastPlateRa == -1) { p.RightAscension = p.TargetRightAscension; } else { p.RightAscension = LastPlateRa; }
-                    if (LastPlateDec == -1) { p.Declination = p.TargetDeclination; } else { p.Declination = LastPlateDec; }
-                    //p.MaxSolveTime = 10;
-                    p.Catalog = (CatalogType)11;
-                    p.CatalogPath = settings.UCAC4_path;
-                    p.CatalogExpansion = 0.4;
-
-                    p.TraceLevel = 2;
-                    p.TracePath = InputFilename + ".PlateSolveDebug";
-                    if (!Directory.Exists(p.TracePath)) { Directory.CreateDirectory(p.TracePath); }
-
-                    p.Solve();
-                    PlateRa = p.RightAscension; // in hours
-                    PlateDec = p.Declination;  // in degrees
-                    //PlateLocaltime = p.ExposureStartTime;
-                    //log.Debug("fits header DATE-LOC:" + p.ReadFITSValue("DATE-LOC"));  // note that DatetimeParse on DATE-LOC doesn't work.. not sure why? lack of timezone? 
-                    //log.Debug("fits header DATE-OBS:" + p.ReadFITSValue("DATE-OBS"));
-                    FitsRa = Convert.ToDouble(p.ReadFITSValue("RA")) / 15;
-                    FitsDec = Convert.ToDouble(p.ReadFITSValue("DEC"));
-                    PlateLocaltime = (p.ExposureStartTime).ToLocalTime();
-                    PlateExposureTime = p.ExposureInterval;
-                    Airmass = p.Airmass;
-                    Solved = p.Solved;
-
-                    //log.Info("Platesolve: {@InputFilename},{@RightAscension},{@PlateDec},{@PlateLocaltime},{@PlateExposureTime},{@AirMass},{@SolveTime},", InputFilename, PlateRa, PlateDec, PlateLocaltime, p.Airmass, stopwatch.ElapsedMilliseconds / 1000);
-                    log.Info("Platesolve: Filename: " + InputFilename +
-                        " PlateRa: " + PlateRa +
-                        " PlateDec: " + PlateDec +
-                        " PlateLocaltime: " + PlateLocaltime +
-                        " Airmass: " + p.Airmass +
-                        " FitsRa: " + FitsRa +
-                        " FitsDec: " + FitsDec +
-                        " Solvetime: " + (float)Stopwatch.ElapsedMilliseconds / 1000);
-
-                }
-                catch (Exception ex)
-                {
-                    log.Debug(ex);
-                    _ = Marshal.ReleaseComObject(p);
-                    return (false, 0, 0, DateTime.Now, 0, 0, 0, 0, 0);
-
-                }
-
-
-                p.DetachFITS();
-                _ = Marshal.ReleaseComObject(p); // important or the com object leaks memory
-
-
-                Stopwatch.Stop();
-                //  (bool Solved, double PlateRa, double PlateDec, DateTime PlateLocaltime, double PlateExposureTime, double Airmass, float Solvetime) =  SolveFits(InputFilename);
-                return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
-
-           
-            }
-
-            return (Solved, PlateRa, PlateDec, PlateLocaltime, PlateExposureTime, Airmass, Solvetime, FitsRa, FitsDec);
-        }
-        //public Solves
+        
         public struct Platesolve
         {
             public string CatalogPath;
