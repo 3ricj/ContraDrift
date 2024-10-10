@@ -433,30 +433,38 @@ namespace ContraDrift
                         process.Start();
 
                         // Create a task to wait for the process exit
-                        Task processWaitTask = Task.Run(() => process.WaitForExit());
-
-                        // Wait for the process or timeout/cancellation
-                        if (await Task.WhenAny(processWaitTask, Task.Delay(60000, cancellationToken)) == processWaitTask)
+                        try
                         {
-                            // Process completed in time
-                            if (process.ExitCode != 0)
+                            Task processWaitTask = Task.Run(() => process.WaitForExit());
+                      
+
+                            // Wait for the process or timeout/cancellation
+                            if (await Task.WhenAny(processWaitTask, Task.Delay(60000, cancellationToken)) == processWaitTask)
                             {
-                                log.Error($"PinPoint plate solve failed. Exit Code: {process.ExitCode}. Error: {await process.StandardError.ReadToEndAsync()}");
+                                // Process completed in time
+                                if (process.ExitCode != 0)
+                                {
+                                    log.Error($"PinPoint plate solve failed on {inputFilename} Exit Code: {process.ExitCode}. Error: {await process.StandardError.ReadToEndAsync()}");
+                                    return new SolveResults { Solver = "PinPoint" };
+                                }
+                            }
+                            else
+                            {
+                                // Timeout or cancellation
+                                log.Warn($"PinPoint plate solve timed out or was canceled on {inputFilename}");
+                                if (!process.HasExited)
+                                {
+                                    process.Kill(); // Kill the process if it didn't exit within the timeout
+                                }
+
                                 return new SolveResults { Solver = "PinPoint" };
                             }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            // Timeout or cancellation
-                            log.Warn("PinPoint plate solve timed out or was canceled.");
-                            if (!process.HasExited)
-                            {
-                                process.Kill(); // Kill the process if it didn't exit within the timeout
-                            }
-
+                            log.Error(ex, $"Error during VisualPinPointWrapper launch {inputFilename}");
                             return new SolveResults { Solver = "PinPoint" };
                         }
-
                         // Parse the VisualPinPointWrapper output file (.ini)
                         if (File.Exists(outputFilename))
                         {
@@ -475,7 +483,7 @@ namespace ContraDrift
                             }
                             else
                             {
-                                log.Error("VisualPinPointWrapper plate solve failed, no solution found.");
+                                log.Error($"VisualPinPointWrapper plate solve failed, no solution found on {inputFilename}");
                                 return new SolveResults { Solver = "PinPoint" };
                             }
 
@@ -486,12 +494,9 @@ namespace ContraDrift
 
                             fitsRa = plateRa;  // Example: using the same RA as result
                             fitsDec = plateDec; // Example: using the same DEC as result
-                            plateLocaltime = DateTime.Now;  // Placeholder, replace with actual FITS reading logic
-                            plateExposureTime = 10;  // Placeholder, replace with actual FITS reading logic
-                            airmass = 1.0;  // Placeholder, replace with actual FITS reading logic
                             log.Info("VisualPinPointWrapper_solvetime=" + stopwatch.Elapsed);
 
-                            log.Info($"VisualPinPointWrapper plate solve succeeded. RA: {plateRa}, DEC: {plateDec}, ExposureTime: {plateExposureTime}, Airmass: {airmass}");
+                            log.Info($"VisualPinPointWrapper plate solve succeeded on {inputFilename}: RA: {plateRa}, DEC: {plateDec}");
                         }
                         else
                         {
@@ -504,7 +509,7 @@ namespace ContraDrift
                 }
                 catch (Exception ex)
                 {
-                    log.Error(ex, "Error during VisualPinPointWrapper plate solving.");
+                    log.Error(ex, $"Error during VisualPinPointWrapper plate solving on {inputFilename}");
                     return new SolveResults { Solver = "PinPoint" };
                 }
 
@@ -565,14 +570,14 @@ namespace ContraDrift
                             // Process completed in time
                             if (process.ExitCode != 0)
                             {
-                                log.Error($"ASTAP plate solve failed. Exit Code: {process.ExitCode}. Error: {await process.StandardError.ReadToEndAsync()}");
+                                log.Error($"ASTAP plate solve failed on {inputFilename} Exit Code: {process.ExitCode}. Error: {await process.StandardError.ReadToEndAsync()}");
                                 return new SolveResults { Solver = "astap" };
                             }
                         }
                         else
                         {
                             // Timeout or cancellation
-                            log.Warn("ASTAP plate solve timed out or was canceled.");
+                            log.Warn($"ASTAP plate solve timed out or was canceled on {inputFilename}");
                             if (!process.HasExited)
                             {
                                 process.Kill(); // Kill the process if it didn't exit within the timeout
@@ -599,7 +604,7 @@ namespace ContraDrift
                             }
                             else
                             {
-                                log.Error("ASTAP plate solve failed, no solution found.");
+                                log.Error($"ASTAP plate solve failed, no solution found on {inputFilename}");
                                 return new SolveResults { Solver = "astap" };
                             }
 
@@ -612,7 +617,7 @@ namespace ContraDrift
                             fitsDec = plateDec; // Example: using the same DEC as result
                             log.Info("astap_solvetime=" + stopwatch.Elapsed);
 
-                            log.Info($"ASTAP plate solve succeeded. RA: {plateRa}, DEC: {plateDec}");
+                            log.Info($"ASTAP plate solve succeeded on {inputFilename}, RA: {plateRa}, DEC: {plateDec}");
                         }
                         else
                         {
@@ -625,7 +630,7 @@ namespace ContraDrift
                 }
                 catch (Exception ex)
                 {
-                    log.Error(ex, "Error during ASTAP plate solving.");
+                    log.Error(ex, $"Error during ASTAP plate solving {inputFilename}");
                     return new SolveResults { Solver = "astap" };
                 }
 
