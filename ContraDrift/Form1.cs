@@ -211,10 +211,6 @@ namespace ContraDrift
 
         private void SelectTelescopeButton_Click(object sender, EventArgs e)
         {
-            //ASCOM.Utilities.Chooser chsr = new ASCOM.Utilities.Chooser();
-            //chsr.DeviceType = "Telescope";
-            //string scopeID = chsr.Choose();
-            //            scope = new scopeID;
 
             ASCOM.Utilities.Chooser selector;
             selector = new ASCOM.Utilities.Chooser();
@@ -478,7 +474,9 @@ namespace ContraDrift
                         Filter = newheaders.Filter,
                         ExpTime = newheaders.ExposureTime
                     });
-                    return; }
+                    UpdateChartXY(0, 0, 0, 0, false);
+                    return; 
+                }
 
 
                 frames.AddPlateCollection(PlateRaArcSec, PlateDecArcSec, newheaders.LocalTime, newheaders.ExposureTime);
@@ -520,7 +518,6 @@ namespace ContraDrift
                     }
                     else
                     {
-
 
                         dataManager.AddRecord(new DataManager.DataRecord
                         {
@@ -777,50 +774,46 @@ namespace ContraDrift
             PendingMessage = PendingMessage + incomingMsg;
         }
 
-        /*
-        struct DataGridElement
-        {
-            public DateTime timestamp;
-            public string type;
-            public string filename;
-            public double exptime;
-            public string filter;
-            public double dtsec;
-            public double platera;
-            public double plateraarcsecbuf;
-            public double rap;
-            public double rai;
-            public double rad;
-            public double newrarate;
-            public double platedec;
-            public double platedecarcsecbuf;
-            public double decp;
-            public double deci;
-            public double decd;
-            public double newdecrate;
-            public string pendingmessage;
-            public double scopera;
-            public double scopedec;
-            public double fitsheaderra;
-            public double fitsheaderdec;
-            public DateTime RateUpdateTimeStamp;
 
-        }*/
-        private void UpdateChartXY (double RaP, double RaI, double DecP, double DecI)
+        private void UpdateChartXY(double RaP, double RaI, double DecP, double DecI, bool isSolveFailed = false)
         {
-                BeginInvoke(new System.Action(() =>
+            BeginInvoke(new System.Action(() =>
+            {
+                int rowIndex = dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling();
+
+                // Determine the previous Y position for RaP and DecP
+                double lastRaP = (ChartRa.Series[0].Points.Count > 0) ? ChartRa.Series[0].Points.Last().YValues[0] : 0;
+                double lastDecP = (ChartDec.Series[0].Points.Count > 0) ? ChartDec.Series[0].Points.Last().YValues[0] : 0;
+
+                // If solve failed, use the previous Y values; otherwise, use the current RaP and DecP
+                double currentRaP = isSolveFailed ? lastRaP : RaP;
+                double currentDecP = isSolveFailed ? lastDecP : DecP;
+
+                // Add point for RaP
+                var raPPoint = ChartRa.Series[0].Points.AddXY(rowIndex, currentRaP);
+                if (isSolveFailed)
                 {
-                    ChartRa.Series[0].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), RaP);
-                    ChartRa.Series[1].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), RaI);
-                    ChartRa.ChartAreas[0].RecalculateAxesScale();
+                    ChartRa.Series[0].Points[raPPoint].Color = System.Drawing.Color.Red; // Mark point red if plate solve failed
+                }
 
-                    ChartDec.Series[0].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), DecP);
-                    ChartDec.Series[1].Points.AddXY((dataGridView1.RowCount - framesOld.PlateCollectionCeiling() - frames.PlateCollectionCeiling()), DecI);
-                    ChartDec.ChartAreas[0].RecalculateAxesScale();
-                }));
+                // Add point for RaI (RaI does not need special treatment)
+                ChartRa.Series[1].Points.AddXY(rowIndex, RaI);
+                ChartRa.ChartAreas[0].RecalculateAxesScale();
 
+                // Add point for DecP
+                var decPPoint = ChartDec.Series[0].Points.AddXY(rowIndex, currentDecP);
+                if (isSolveFailed)
+                {
+                    ChartDec.Series[0].Points[decPPoint].Color = System.Drawing.Color.Red; // Mark point red if plate solve failed
+                }
+
+                // Add point for DecI (DecI does not need special treatment)
+                ChartDec.Series[1].Points.AddXY(rowIndex, DecI);
+                ChartDec.ChartAreas[0].RecalculateAxesScale();
+            }));
         }
-        
+
+
 
         private void SetupCharts()
         {
