@@ -62,29 +62,36 @@ namespace ContraDrift
             SetupExcelWriter(); // Call to setup Excel worksheet
         }
 
-        public void AddRecord(DataRecord record)
+        public bool AddRecord(DataRecord record)
         {
             lock (recordLock)
             {
+                if (records.Any(r => r.Filename == record.Filename))
+                {
+                    return false;  // Duplicate found, do not add the record
+                }
                 records.Add(record);
                 AddToGridView(record);
                 AddToExcel(record);
             }
+            return true;
         }
-
-        public void UpdateRecord(int index, DataRecord updatedRecord)
+        // Method to update an existing record
+        public bool UpdateRecord(DataRecord updatedRecord)
         {
-            if (index >= 0 && index < records.Count)
+            var existingRecord = records.FirstOrDefault(r => r.Filename == updatedRecord.Filename);
+            if (existingRecord == null)
             {
-                lock (recordLock)
-                {
-                    records[index] = updatedRecord;
-                    UpdateGridView(index, updatedRecord);
-                    UpdateExcelRow(index, updatedRecord);  
-                }
+                AddRecord(updatedRecord);
+                return true ;  // No record found to update
             }
+            int recordIndex = records.IndexOf(existingRecord);
+            records[recordIndex] = updatedRecord;
+            UpdateGridView(recordIndex, updatedRecord);
+            UpdateExcelRow(recordIndex, updatedRecord);
+            return true;
         }
-
+            
         public List<DataRecord> GetRecords()
         {
             return records;
@@ -112,14 +119,18 @@ namespace ContraDrift
                 Name = "Filename",
                 SortMode = DataGridViewColumnSortMode.NotSortable,
                 DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight },
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells } ) ;
+                Width = 50,
+            //    AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells
+            } ) ;
 
             dataGridView.Columns.Add(new DataGridViewTextBoxColumn { 
                 HeaderText = "Type", 
                 Name = "Type",
                 SortMode = DataGridViewColumnSortMode.NotSortable,
-                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight },
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells } );
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleLeft },
+                Width = 100, 
+            //    AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells 
+            } );
 
             dataGridView.Columns.Add(new DataGridViewTextBoxColumn {
                 HeaderText = "ExpTime", 
@@ -356,6 +367,8 @@ namespace ContraDrift
             xlWorkBook.SaveCopyAs(filePath);
         }
 
+
+
         // Method to generate a timestamped filename for saving
         public string GenerateFileName(string extension)
         {
@@ -422,25 +435,11 @@ namespace ContraDrift
                 );
 
                 
-                    if (IsAtBottomOfDataGridView())
-                    {
                         ScrollToBottom();
-                    }
                 }));
             
         }
-        private bool IsAtBottomOfDataGridView()
-        {
-            if (dataGridView.RowCount == 0)
-                return true;
 
-            int visibleRows = dataGridView.DisplayedRowCount(false);
-            int firstDisplayedRow = dataGridView.FirstDisplayedScrollingRowIndex;
-            int lastVisibleRow = firstDisplayedRow + visibleRows - 1;
-
-            // Check if the last visible row is the last row in the DataGridView
-            return lastVisibleRow >= dataGridView.RowCount - 1;
-        }
 
         private void ScrollToBottom()
         {
@@ -453,36 +452,36 @@ namespace ContraDrift
 
         private void AddToExcel(DataRecord record)
         {
-            int rowIndex = records.Count + 0; // Excel is 1-based indexing
+            int rowIndex = records.Count + 1; 
             lock (excelLock)
             {
-                xlWorkSheet.Cells[rowIndex + 1, 1] = record.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                xlWorkSheet.Cells[rowIndex + 1, 1].NumberFormat = "m/d/yyyy h:mm:ss.000";
+                xlWorkSheet.Cells[rowIndex, 1] = record.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                xlWorkSheet.Cells[rowIndex, 1].NumberFormat = "m/d/yyyy h:mm:ss.000";
 
-                xlWorkSheet.Cells[rowIndex + 1, 2] = record.Filename;
-                xlWorkSheet.Cells[rowIndex + 1, 3] = record.Type;
-                xlWorkSheet.Cells[rowIndex + 1, 4] = record.ExpTime;
-                xlWorkSheet.Cells[rowIndex + 1, 5] = record.Filter;
-                xlWorkSheet.Cells[rowIndex + 1, 6] = record.DtSec;
-                xlWorkSheet.Cells[rowIndex + 1, 7] = record.PlateRa;
-                xlWorkSheet.Cells[rowIndex + 1, 8] = record.PlateRaArcSecBuf;
-                xlWorkSheet.Cells[rowIndex + 1, 9] = record.RaP;
-                xlWorkSheet.Cells[rowIndex + 1, 10] = record.RaI;
-                xlWorkSheet.Cells[rowIndex + 1, 11] = record.RaD;
-                xlWorkSheet.Cells[rowIndex + 1, 12] = record.NewRaRate;
-                xlWorkSheet.Cells[rowIndex + 1, 13] = record.PlateDec;
-                xlWorkSheet.Cells[rowIndex + 1, 14] = record.PlateDecArcSecBuf;
-                xlWorkSheet.Cells[rowIndex + 1, 15] = record.DecP;
-                xlWorkSheet.Cells[rowIndex + 1, 16] = record.DecI;
-                xlWorkSheet.Cells[rowIndex + 1, 17] = record.DecD;
-                xlWorkSheet.Cells[rowIndex + 1, 18] = record.NewDecRate;
-                xlWorkSheet.Cells[rowIndex + 1, 19] = record.PendingMessage;
-                xlWorkSheet.Cells[rowIndex + 1, 20] = record.ScopeRa;
-                xlWorkSheet.Cells[rowIndex + 1, 21] = record.ScopeDec;
-                xlWorkSheet.Cells[rowIndex + 1, 22] = record.FitsHeaderRa;
-                xlWorkSheet.Cells[rowIndex + 1, 23] = record.FitsHeaderDec;
-                xlWorkSheet.Cells[rowIndex + 1, 24] = record.RateUpdateTimeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                xlWorkSheet.Cells[rowIndex + 1, 24].NumberFormat = "m/d/yyyy h:mm:ss.000";
+                xlWorkSheet.Cells[rowIndex, 2] = record.Filename;
+                xlWorkSheet.Cells[rowIndex, 3] = record.Type;
+                xlWorkSheet.Cells[rowIndex, 4] = record.ExpTime;
+                xlWorkSheet.Cells[rowIndex, 5] = record.Filter;
+                xlWorkSheet.Cells[rowIndex, 6] = record.DtSec;
+                xlWorkSheet.Cells[rowIndex, 7] = record.PlateRa;
+                xlWorkSheet.Cells[rowIndex, 8] = record.PlateRaArcSecBuf;
+                xlWorkSheet.Cells[rowIndex, 9] = record.RaP;
+                xlWorkSheet.Cells[rowIndex, 10] = record.RaI;
+                xlWorkSheet.Cells[rowIndex, 11] = record.RaD;
+                xlWorkSheet.Cells[rowIndex, 12] = record.NewRaRate;
+                xlWorkSheet.Cells[rowIndex, 13] = record.PlateDec;
+                xlWorkSheet.Cells[rowIndex, 14] = record.PlateDecArcSecBuf;
+                xlWorkSheet.Cells[rowIndex, 15] = record.DecP;
+                xlWorkSheet.Cells[rowIndex, 16] = record.DecI;
+                xlWorkSheet.Cells[rowIndex, 17] = record.DecD;
+                xlWorkSheet.Cells[rowIndex, 18] = record.NewDecRate;
+                xlWorkSheet.Cells[rowIndex, 19] = record.PendingMessage;
+                xlWorkSheet.Cells[rowIndex, 20] = record.ScopeRa;
+                xlWorkSheet.Cells[rowIndex, 21] = record.ScopeDec;
+                xlWorkSheet.Cells[rowIndex, 22] = record.FitsHeaderRa;
+                xlWorkSheet.Cells[rowIndex, 23] = record.FitsHeaderDec;
+                xlWorkSheet.Cells[rowIndex, 24] = record.RateUpdateTimeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                xlWorkSheet.Cells[rowIndex, 24].NumberFormat = "m/d/yyyy h:mm:ss.000";
             }
         }
 
@@ -525,30 +524,31 @@ namespace ContraDrift
         {
             lock (excelLock)
             {
-                xlWorkSheet.Cells[rowIndex + 1, 1] = record.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                xlWorkSheet.Cells[rowIndex + 1, 2] = record.Filename;
-                xlWorkSheet.Cells[rowIndex + 1, 3] = record.Type;
-                xlWorkSheet.Cells[rowIndex + 1, 4] = record.ExpTime;
-                xlWorkSheet.Cells[rowIndex + 1, 5] = record.Filter;
-                xlWorkSheet.Cells[rowIndex + 1, 6] = record.DtSec;
-                xlWorkSheet.Cells[rowIndex + 1, 7] = record.PlateRa;
-                xlWorkSheet.Cells[rowIndex + 1, 8] = record.PlateRaArcSecBuf;
-                xlWorkSheet.Cells[rowIndex + 1, 9] = record.RaP;
-                xlWorkSheet.Cells[rowIndex + 1, 10] = record.RaI;
-                xlWorkSheet.Cells[rowIndex + 1, 11] = record.RaD;
-                xlWorkSheet.Cells[rowIndex + 1, 12] = record.NewRaRate;
-                xlWorkSheet.Cells[rowIndex + 1, 13] = record.PlateDec;
-                xlWorkSheet.Cells[rowIndex + 1, 14] = record.PlateDecArcSecBuf;
-                xlWorkSheet.Cells[rowIndex + 1, 15] = record.DecP;
-                xlWorkSheet.Cells[rowIndex + 1, 16] = record.DecI;
-                xlWorkSheet.Cells[rowIndex + 1, 17] = record.DecD;
-                xlWorkSheet.Cells[rowIndex + 1, 18] = record.NewDecRate;
-                xlWorkSheet.Cells[rowIndex + 1, 19] = record.PendingMessage;
-                xlWorkSheet.Cells[rowIndex + 1, 20] = record.ScopeRa;
-                xlWorkSheet.Cells[rowIndex + 1, 21] = record.ScopeDec;
-                xlWorkSheet.Cells[rowIndex + 1, 22] = record.FitsHeaderRa;
-                xlWorkSheet.Cells[rowIndex + 1, 23] = record.FitsHeaderDec;
-                xlWorkSheet.Cells[rowIndex + 1, 24] = record.RateUpdateTimeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                rowIndex = rowIndex + 2; // excel starts counting at 1, plus there is a header.  So we have to offset by for all data.
+                xlWorkSheet.Cells[rowIndex, 1] = record.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                xlWorkSheet.Cells[rowIndex, 2] = record.Filename;
+                xlWorkSheet.Cells[rowIndex, 3] = record.Type;
+                xlWorkSheet.Cells[rowIndex, 4] = record.ExpTime;
+                xlWorkSheet.Cells[rowIndex, 5] = record.Filter;
+                xlWorkSheet.Cells[rowIndex, 6] = record.DtSec;
+                xlWorkSheet.Cells[rowIndex, 7] = record.PlateRa;
+                xlWorkSheet.Cells[rowIndex, 8] = record.PlateRaArcSecBuf;
+                xlWorkSheet.Cells[rowIndex, 9] = record.RaP;
+                xlWorkSheet.Cells[rowIndex, 10] = record.RaI;
+                xlWorkSheet.Cells[rowIndex, 11] = record.RaD;
+                xlWorkSheet.Cells[rowIndex, 12] = record.NewRaRate;
+                xlWorkSheet.Cells[rowIndex, 13] = record.PlateDec;
+                xlWorkSheet.Cells[rowIndex, 14] = record.PlateDecArcSecBuf;
+                xlWorkSheet.Cells[rowIndex, 15] = record.DecP;
+                xlWorkSheet.Cells[rowIndex, 16] = record.DecI;
+                xlWorkSheet.Cells[rowIndex, 17] = record.DecD;
+                xlWorkSheet.Cells[rowIndex, 18] = record.NewDecRate;
+                xlWorkSheet.Cells[rowIndex, 19] = record.PendingMessage;
+                xlWorkSheet.Cells[rowIndex, 20] = record.ScopeRa;
+                xlWorkSheet.Cells[rowIndex, 21] = record.ScopeDec;
+                xlWorkSheet.Cells[rowIndex, 22] = record.FitsHeaderRa;
+                xlWorkSheet.Cells[rowIndex, 23] = record.FitsHeaderDec;
+                xlWorkSheet.Cells[rowIndex, 24] = record.RateUpdateTimeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
             }
         }
     }

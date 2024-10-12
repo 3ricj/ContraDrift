@@ -95,8 +95,7 @@ namespace ContraDrift
 
         private System.Diagnostics.Stopwatch Stopwatch = new System.Diagnostics.Stopwatch();
 
-
-        
+        private static SemaphoreSlim solveSemaphore = new SemaphoreSlim(1, 1); // Limit to 1 concurrent operation
 
         public Form1()
         {
@@ -112,7 +111,6 @@ namespace ContraDrift
 
 
             this.FormClosing += new FormClosingEventHandler(Form1_FormClosing);
-
 
             textBox1.Text = settings.TelescopeProgId;
             textBox2.Text = settings.WatchFolder;
@@ -138,13 +136,9 @@ namespace ContraDrift
             DecRateLimitTextBox.Text = settings.DecRateLimitSetting.ToString();
             BufferFitsCount.Text = settings.BufferFitsCount.ToString();
 
-
-
             if (settings.ProcessingTraditional) { ProcessingTraditional.Checked = true; } else { ProcessingFilter.Checked = true; }
 
-
             settings.Status = "Stopped";
-
 
         }
 
@@ -398,18 +392,22 @@ namespace ContraDrift
                         Filename = InputFilename,
                         Type = "SHORTFRAME",
                         ExpTime = newheaders.ExposureTime,
-                        Filter = newheaders.Filter
+                        Filter = newheaders.Filter,
+                        PendingMessage = PendingMessage
                     });
                     return;
                 }
+                FitsManager.SolveResults solveResult = null;
 
+                // Cancel and await the current running task, if any
                 if (plateSolveTask != null && !plateSolveTask.IsCompleted)
                 {
-                    log.Warn("Previous plate solve is still running. Cancelling it and moving on to the next file.");
-                    solveCts.Cancel(); // Cancel the previous plate solve
+                    log.Warn("Previous plate solve is still running. Cancelling it.");
+                    solveCts.Cancel();
+
                     try
                     {
-                        await plateSolveTask; // Ensure proper cleanup of the task
+                        await plateSolveTask; // Ensure proper cleanup of the previous task
                     }
                     catch (TaskCanceledException)
                     {
@@ -417,23 +415,47 @@ namespace ContraDrift
                     }
                 }
 
-
-                // Set up new cancellation token for the next plate solve
-                solveCts = new CancellationTokenSource();
-//                solveCts.Cancel();
-                // Start plate solving for the current file
-                plateSolveTask = fitsManager.PlateSolveAllAsync(InputFilename, solveCts.Token);
-
-                // Log the result of the completed solve task
-                var solveResult = await plateSolveTask;
-
-                if (solveResult.Solved)
+                dataManager.AddRecord(new DataManager.DataRecord
                 {
-                    log.Info($"Plate solve succeeded for file: {InputFilename}. RA: {solveResult.PlateRa}, DEC: {solveResult.PlateDec}");
+                    Timestamp = newheaders.LocalTime,
+                    Filename = InputFilename,
+                    Type = "PROCESSING",
+                    ExpTime = newheaders.ExposureTime,
+                    Filter = newheaders.Filter,
+                    PendingMessage = PendingMessage
+
+                });
+//                dataManager.UpdateRecord();
+                // Now that any previous task is canceled, request the semaphore for the next task
+                await solveSemaphore.WaitAsync();  // Wait for the semaphore to become available
+                log.Info("Semaphore started..");
+
+                try
+                {
+                    // Create a new cancellation token for the new plate-solving task
+                    solveCts = new CancellationTokenSource();
+
+                    // Start the plate solving task
+                    plateSolveTask = fitsManager.PlateSolveAllAsync(InputFilename, solveCts.Token);
+
+                    // Await the result of the plate solve task
+                    solveResult = await plateSolveTask;
+
+                    // Log the result of the completed solve task
+                    if (solveResult.Solved)
+                    {
+                        log.Info($"Plate solve succeeded for file: {InputFilename}. RA: {solveResult.PlateRa}, DEC: {solveResult.PlateDec}");
+                    }
+                    else
+                    {
+                        log.Warn($"Plate solve failed for file: {InputFilename}");
+                    }
                 }
-                else
+                finally
                 {
-                    log.Warn($"Plate solve failed for file: {InputFilename}");
+                    // Always release the semaphore so other tasks can proceed
+                    solveSemaphore.Release();
+                    log.Info("Semaphore Released");
                 }
 
                 double PlateRaArcSec = solveResult.PlateRa * 15 * 3600; // convert from hours to arcsec
@@ -466,13 +488,14 @@ namespace ContraDrift
 
                 if (!solveResult.Solved) {
                     log.Error("Platesolved failed! ");
-                    dataManager.AddRecord(new DataManager.DataRecord
+                    dataManager.UpdateRecord(new DataManager.DataRecord
                     {
                         Timestamp = newheaders.LocalTime,
                         Filename = InputFilename,
                         Type = "SOLVEFAIL",
                         Filter = newheaders.Filter,
-                        ExpTime = newheaders.ExposureTime
+                        ExpTime = newheaders.ExposureTime,
+                        PendingMessage = PendingMessage
                     });
                     UpdateChartXY(0, 0, 0, 0, false);
                     return; 
@@ -499,7 +522,7 @@ namespace ContraDrift
                         PID_propotional_RA = 0; PID_integral_RA = 0; PID_derivative_RA = 0; PID_previous_propotional_RA = 0;
                         AddMessage("Reference image. RaRef:" + PlateRaReference + " DecRef: " + PlateDecReference);
                         FirstImage = false;
-                        dataManager.AddRecord(new DataManager.DataRecord
+                        dataManager.UpdateRecord(new DataManager.DataRecord
                         {
                             Timestamp = newheaders.LocalTime,
                             Filename = InputFilename,
@@ -519,7 +542,7 @@ namespace ContraDrift
                     else
                     {
 
-                        dataManager.AddRecord(new DataManager.DataRecord
+                        dataManager.UpdateRecord(new DataManager.DataRecord
                         {
                             Timestamp = newheaders.LocalTime,
                             Filename = InputFilename,
@@ -571,7 +594,7 @@ namespace ContraDrift
                 log.Debug("PID_DEC_settings:  PID_Setting_Kp_DEC: " + settings.PID_Setting_Kp_DEC + ",PID_Setting_Ki_DEC: " + settings.PID_Setting_Ki_DEC + ",PID_Setting_Kd_DEC: " + settings.PID_Setting_Kd_DEC);
 
                 if (PropotionalJournal_DEC.Count <= settings.BufferFitsCount) {
-                    dataManager.AddRecord(new DataManager.DataRecord
+                    dataManager.UpdateRecord(new DataManager.DataRecord
                     {
                         Timestamp = newheaders.LocalTime,
                         Filename = InputFilename,
@@ -641,7 +664,7 @@ namespace ContraDrift
                     FirstImage = true; // reset everything, reference image etc.  
 
                 }
-                dataManager.AddRecord(new DataManager.DataRecord
+                dataManager.UpdateRecord(new DataManager.DataRecord
                 {
                     Timestamp = newheaders.LocalTime,
                     Filename = InputFilename,
@@ -681,6 +704,9 @@ namespace ContraDrift
                     //PROCESS IMAGES AND DISPLAY
                 }
             });
+
+            ClearMessage();
+
 
         }
         private void telescope_RightAscensionRate(double RaRate)
@@ -772,6 +798,10 @@ namespace ContraDrift
         private void AddMessage(string incomingMsg)
         {
             PendingMessage = PendingMessage + incomingMsg;
+        }
+        private void ClearMessage()
+        {
+            PendingMessage = "";
         }
 
 

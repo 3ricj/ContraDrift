@@ -67,6 +67,7 @@ namespace ContraDrift
 
         }
 
+
         private static readonly Logger log = LogManager.GetCurrentClassLogger();
         // ReadFitsHeader method to extract key values from the FITS header file
 
