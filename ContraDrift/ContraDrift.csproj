@@ -76,6 +76,8 @@
   <ItemGroup>
     <Compile Include="DataManager.cs" />
     <Compile Include="FitsManager.cs" />
+    <Compile Include="FitsManagerConfig.cs" />
+    <Compile Include="GuidingPidController.cs" />
     <Compile Include="SettingsManager.cs" />
     <Compile Include="FrameList.cs" />
     <Compile Include="Form1.cs">

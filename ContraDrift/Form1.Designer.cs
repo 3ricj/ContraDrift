@@ -33,6 +33,7 @@ namespace ContraDrift
             System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
             System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea2 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
             System.Windows.Forms.DataVisualization.Charting.Series series2 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            this.toolTip1 = new System.Windows.Forms.ToolTip();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.textBox2 = new System.Windows.Forms.TextBox();
@@ -85,9 +86,17 @@ namespace ContraDrift
             this.label1 = new System.Windows.Forms.Label();
             this.PID_Setting_Kp_RA_filter = new System.Windows.Forms.TextBox();
             this.PlatesolveGroupbox = new System.Windows.Forms.GroupBox();
+            this.EnableParentDirSolveCheckBox = new System.Windows.Forms.CheckBox();
+            this.VppwExeBrowseButton = new System.Windows.Forms.Button();
+            this.AstapExeBrowseButton = new System.Windows.Forms.Button();
+            this.VppwExePathTextBox = new System.Windows.Forms.TextBox();
+            this.AstapExePathTextBox = new System.Windows.Forms.TextBox();
+            this.labelVppw = new System.Windows.Forms.Label();
+            this.labelAstap = new System.Windows.Forms.Label();
             this.textBox3 = new System.Windows.Forms.TextBox();
             this.PlaceSolvePathBrowseButton = new System.Windows.Forms.Button();
             this.folderBrowserDialog2 = new System.Windows.Forms.FolderBrowserDialog();
+            this.openFileDialogSolver = new System.Windows.Forms.OpenFileDialog();
             this.dataGridView1 = new System.Windows.Forms.DataGridView();
             this.Export = new System.Windows.Forms.Button();
             this.button5 = new System.Windows.Forms.Button();
@@ -130,6 +139,7 @@ namespace ContraDrift
             this.textBox2.Name = "textBox2";
             this.textBox2.Size = new System.Drawing.Size(505, 20);
             this.textBox2.TabIndex = 1;
+            this.toolTip1.SetToolTip(this.textBox2, "Point this at the NINA crop folder (default: {NINA image save path}/crop/, or the plugin Crop Path if set).");
             // 
             // WatchFolderBrowseButton
             // 
@@ -216,7 +226,7 @@ namespace ContraDrift
             this.groupBox3.Controls.Add(this.PID_Setting_Ki_RA_filter);
             this.groupBox3.Controls.Add(this.label1);
             this.groupBox3.Controls.Add(this.PID_Setting_Kp_RA_filter);
-            this.groupBox3.Location = new System.Drawing.Point(37, 235);
+            this.groupBox3.Location = new System.Drawing.Point(37, 310);
             this.groupBox3.Name = "groupBox3";
             this.groupBox3.Size = new System.Drawing.Size(702, 239);
             this.groupBox3.TabIndex = 6;
@@ -591,38 +601,111 @@ namespace ContraDrift
             // 
             // PlatesolveGroupbox
             // 
+            this.PlatesolveGroupbox.Controls.Add(this.EnableParentDirSolveCheckBox);
+            this.PlatesolveGroupbox.Controls.Add(this.VppwExeBrowseButton);
+            this.PlatesolveGroupbox.Controls.Add(this.AstapExeBrowseButton);
+            this.PlatesolveGroupbox.Controls.Add(this.VppwExePathTextBox);
+            this.PlatesolveGroupbox.Controls.Add(this.AstapExePathTextBox);
+            this.PlatesolveGroupbox.Controls.Add(this.labelVppw);
+            this.PlatesolveGroupbox.Controls.Add(this.labelAstap);
             this.PlatesolveGroupbox.Controls.Add(this.textBox3);
             this.PlatesolveGroupbox.Controls.Add(this.PlaceSolvePathBrowseButton);
             this.PlatesolveGroupbox.Location = new System.Drawing.Point(37, 157);
             this.PlatesolveGroupbox.Name = "PlatesolveGroupbox";
-            this.PlatesolveGroupbox.Size = new System.Drawing.Size(702, 72);
+            this.PlatesolveGroupbox.Size = new System.Drawing.Size(702, 145);
             this.PlatesolveGroupbox.TabIndex = 7;
             this.PlatesolveGroupbox.TabStop = false;
-            this.PlatesolveGroupbox.Text = "Platesolve UCAC4 path";
+            this.PlatesolveGroupbox.Text = "Plate Solve Paths";
+            // 
+            // EnableParentDirSolveCheckBox
+            // 
+            this.EnableParentDirSolveCheckBox.AutoSize = true;
+            this.EnableParentDirSolveCheckBox.Location = new System.Drawing.Point(156, 118);
+            this.EnableParentDirSolveCheckBox.Name = "EnableParentDirSolveCheckBox";
+            this.EnableParentDirSolveCheckBox.Size = new System.Drawing.Size(185, 17);
+            this.EnableParentDirSolveCheckBox.TabIndex = 8;
+            this.EnableParentDirSolveCheckBox.Text = "Enable parent directory fallback";
+            this.EnableParentDirSolveCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // VppwExeBrowseButton
+            // 
+            this.VppwExeBrowseButton.Location = new System.Drawing.Point(16, 83);
+            this.VppwExeBrowseButton.Name = "VppwExeBrowseButton";
+            this.VppwExeBrowseButton.Size = new System.Drawing.Size(131, 26);
+            this.VppwExeBrowseButton.TabIndex = 6;
+            this.VppwExeBrowseButton.Text = "Browse VPPW";
+            this.VppwExeBrowseButton.UseVisualStyleBackColor = true;
+            this.VppwExeBrowseButton.Click += new System.EventHandler(this.VppwExeBrowseButton_Click);
+            // 
+            // AstapExeBrowseButton
+            // 
+            this.AstapExeBrowseButton.Location = new System.Drawing.Point(16, 51);
+            this.AstapExeBrowseButton.Name = "AstapExeBrowseButton";
+            this.AstapExeBrowseButton.Size = new System.Drawing.Size(131, 26);
+            this.AstapExeBrowseButton.TabIndex = 4;
+            this.AstapExeBrowseButton.Text = "Browse ASTAP";
+            this.AstapExeBrowseButton.UseVisualStyleBackColor = true;
+            this.AstapExeBrowseButton.Click += new System.EventHandler(this.AstapExeBrowseButton_Click);
+            // 
+            // VppwExePathTextBox
+            // 
+            this.VppwExePathTextBox.Location = new System.Drawing.Point(156, 87);
+            this.VppwExePathTextBox.Name = "VppwExePathTextBox";
+            this.VppwExePathTextBox.Size = new System.Drawing.Size(505, 20);
+            this.VppwExePathTextBox.TabIndex = 7;
+            // 
+            // AstapExePathTextBox
+            // 
+            this.AstapExePathTextBox.Location = new System.Drawing.Point(156, 55);
+            this.AstapExePathTextBox.Name = "AstapExePathTextBox";
+            this.AstapExePathTextBox.Size = new System.Drawing.Size(505, 20);
+            this.AstapExePathTextBox.TabIndex = 5;
+            // 
+            // labelVppw
+            // 
+            this.labelVppw.AutoSize = true;
+            this.labelVppw.Location = new System.Drawing.Point(153, 71);
+            this.labelVppw.Name = "labelVppw";
+            this.labelVppw.Size = new System.Drawing.Size(106, 13);
+            this.labelVppw.TabIndex = 10;
+            this.labelVppw.Text = "VPPW executable";
+            // 
+            // labelAstap
+            // 
+            this.labelAstap.AutoSize = true;
+            this.labelAstap.Location = new System.Drawing.Point(153, 39);
+            this.labelAstap.Name = "labelAstap";
+            this.labelAstap.Size = new System.Drawing.Size(99, 13);
+            this.labelAstap.TabIndex = 9;
+            this.labelAstap.Text = "ASTAP executable";
             // 
             // textBox3
             // 
-            this.textBox3.Location = new System.Drawing.Point(156, 23);
+            this.textBox3.Location = new System.Drawing.Point(156, 19);
             this.textBox3.Name = "textBox3";
             this.textBox3.Size = new System.Drawing.Size(505, 20);
             this.textBox3.TabIndex = 3;
             // 
             // PlaceSolvePathBrowseButton
             // 
-            this.PlaceSolvePathBrowseButton.Location = new System.Drawing.Point(16, 19);
+            this.PlaceSolvePathBrowseButton.Location = new System.Drawing.Point(16, 15);
             this.PlaceSolvePathBrowseButton.Name = "PlaceSolvePathBrowseButton";
             this.PlaceSolvePathBrowseButton.Size = new System.Drawing.Size(131, 26);
             this.PlaceSolvePathBrowseButton.TabIndex = 2;
-            this.PlaceSolvePathBrowseButton.Text = "Browse";
+            this.PlaceSolvePathBrowseButton.Text = "Browse UCAC4";
             this.PlaceSolvePathBrowseButton.UseVisualStyleBackColor = true;
             this.PlaceSolvePathBrowseButton.Click += new System.EventHandler(this.button4_Click);
+            // 
+            // openFileDialogSolver
+            // 
+            this.openFileDialogSolver.Filter = "Executable files (*.exe)|*.exe|All files (*.*)|*.*";
             // 
             // dataGridView1
             // 
             this.dataGridView1.AllowUserToAddRows = false;
             this.dataGridView1.AllowUserToDeleteRows = false;
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Location = new System.Drawing.Point(37, 537);
+            this.dataGridView1.Location = new System.Drawing.Point(37, 612);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.ReadOnly = true;
             this.dataGridView1.RowHeadersWidth = 82;
@@ -631,7 +714,7 @@ namespace ContraDrift
             // 
             // Export
             // 
-            this.Export.Location = new System.Drawing.Point(154, 495);
+            this.Export.Location = new System.Drawing.Point(154, 570);
             this.Export.Name = "Export";
             this.Export.Size = new System.Drawing.Size(75, 23);
             this.Export.TabIndex = 9;
@@ -641,7 +724,7 @@ namespace ContraDrift
             // 
             // button5
             // 
-            this.button5.Location = new System.Drawing.Point(56, 495);
+            this.button5.Location = new System.Drawing.Point(56, 570);
             this.button5.Name = "button5";
             this.button5.Size = new System.Drawing.Size(75, 23);
             this.button5.TabIndex = 10;
@@ -678,7 +761,7 @@ namespace ContraDrift
             // TamperRaRate
             // 
             this.TamperRaRate.AutoSize = true;
-            this.TamperRaRate.Location = new System.Drawing.Point(283, 500);
+            this.TamperRaRate.Location = new System.Drawing.Point(283, 575);
             this.TamperRaRate.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.TamperRaRate.Name = "TamperRaRate";
             this.TamperRaRate.Size = new System.Drawing.Size(102, 17);
@@ -689,7 +772,7 @@ namespace ContraDrift
             // TamperDecRate
             // 
             this.TamperDecRate.AutoSize = true;
-            this.TamperDecRate.Location = new System.Drawing.Point(404, 500);
+            this.TamperDecRate.Location = new System.Drawing.Point(404, 575);
             this.TamperDecRate.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
             this.TamperDecRate.Name = "TamperDecRate";
             this.TamperDecRate.Size = new System.Drawing.Size(108, 17);
@@ -712,7 +795,7 @@ namespace ContraDrift
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSize = true;
-            this.ClientSize = new System.Drawing.Size(1442, 739);
+            this.ClientSize = new System.Drawing.Size(1442, 814);
             this.Controls.Add(this.ResetButton);
             this.Controls.Add(this.TamperDecRate);
             this.Controls.Add(this.TamperRaRate);
@@ -748,6 +831,7 @@ namespace ContraDrift
         }
 
         #endregion
+        private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog1;
@@ -793,9 +877,17 @@ namespace ContraDrift
         private System.Windows.Forms.TextBox PID_Setting_Kp_RA;
         private System.Windows.Forms.Button SaveButton;
         private System.Windows.Forms.GroupBox PlatesolveGroupbox;
+        private System.Windows.Forms.CheckBox EnableParentDirSolveCheckBox;
+        private System.Windows.Forms.Button VppwExeBrowseButton;
+        private System.Windows.Forms.Button AstapExeBrowseButton;
+        private System.Windows.Forms.TextBox VppwExePathTextBox;
+        private System.Windows.Forms.TextBox AstapExePathTextBox;
+        private System.Windows.Forms.Label labelVppw;
+        private System.Windows.Forms.Label labelAstap;
         private System.Windows.Forms.TextBox textBox3;
         private System.Windows.Forms.Button PlaceSolvePathBrowseButton;
         private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog2;
+        private System.Windows.Forms.OpenFileDialog openFileDialogSolver;
         private System.Windows.Forms.Button SelectTelescopeButton;
         private System.Windows.Forms.DataGridView dataGridView1;
         private System.Windows.Forms.Button Export;

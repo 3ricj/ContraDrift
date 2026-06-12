@@ -1,19 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <OutputType>Library</OutputType>
     <RootNamespace>NINA.Contradrift</RootNamespace>
     <AssemblyName>NINA.Contradrift</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="NINA.Plugin" Version="3.0.0.2017-beta" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ContradriftDrivers\" />
+    <PackageReference Include="NINA.Plugin" Version="3.3.0.1047-nightly" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Properties\Settings.Designer.cs">
@@ -28,8 +26,7 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
-  <PropertyGroup />
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="&#xD;&#xA;if not exist &quot;%25localappdata%25\NINA\Plugins\3.0.0&quot; (&#xD;&#xA;  echo &quot;Creating $(PlatformName) Plugins folder&quot;&#xD;&#xA;  mkdir &quot;%25localappdata%25\NINA\Plugins\3.0.0&quot;&#xD;&#xA;)&#xD;&#xA;if not exist &quot;%25localappdata%25\NINA\Plugins\3.0.0\$(TargetName)&quot; (&#xD;&#xA;  echo &quot;Creating $(PlatformName) Plugins $(TargetName) folder&quot;&#xD;&#xA;  mkdir &quot;%25localappdata%25\NINA\Plugins\3.0.0\$(TargetName)&quot;&#xD;&#xA;)&#xD;&#xA;&#xD;&#xA;echo &quot;Copying $(PlatformName) $(TargetFileName)&quot;&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;%25localappdata%25\NINA\Plugins\3.0.0\$(TargetName)&quot; /h/i/c/k/e/r/y&#xD;&#xA;&quot;c:\Program Files\N.I.N.A. - Nighttime Imaging 'N' Astronomy\nina.exe&quot;&#xD;&#xA;&#xD;&#xA;  " />
+    <Exec Command="if not exist &quot;%25localappdata%25\NINA\Plugins\3.0.0&quot; mkdir &quot;%25localappdata%25\NINA\Plugins\3.0.0&quot;&#xD;&#xA;if not exist &quot;%25localappdata%25\NINA\Plugins\3.0.0\$(TargetName)&quot; mkdir &quot;%25localappdata%25\NINA\Plugins\3.0.0\$(TargetName)&quot;&#xD;&#xA;echo Copying $(TargetFileName) to NINA Plugins folder&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;%25localappdata%25\NINA\Plugins\3.0.0\$(TargetName)&quot; /h/i/c/k/e/r/y" />
   </Target>
 </Project>

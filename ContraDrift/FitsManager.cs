@@ -20,6 +20,13 @@ namespace ContraDrift
 {
     public class FitsManager
     {
+        private readonly FitsManagerConfig config;
+
+        public FitsManager(FitsManagerConfig config = null)
+        {
+            this.config = config ?? new FitsManagerConfig();
+        }
+
         public class FitsHeaders
         {
             public bool Solved { get; set; }
@@ -198,95 +205,81 @@ namespace ContraDrift
             }
 
             // Handle .fits files (process as FITS header)
+            bf = null;
             try
             {
-                // Check if the file exists before proceeding
                 if (!File.Exists(inputFilename))
                 {
                     log.Error($"FITS file not found: {inputFilename}");
-                    return (newheader); // (false, 0, 0, DateTime.Now, 0, 0, 0, 0, 0, filter);
+                    return newheader;
                 }
 
-                // Open the FITS file using CSharpFITS
                 log.Info($"Opening FITS file: {inputFilename}");
 
                 bf = new BufferedFile(inputFilename);
                 fits = new Fits(bf);
 
-                // Read the HDU (Header Data Unit) from the FITS file
                 BasicHDU hdu = fits.ReadHDU();
                 if (hdu == null)
                 {
                     log.Error("No HDU found in FITS file.");
-                    return (newheader);
+                    return newheader;
                 }
 
                 Header header = hdu.Header;
 
-                // Extract necessary header values
-
-                // Read the RA from the header (CRVAL1)
                 if (header.ContainsKey("CRVAL1"))
                 {
-                    newheader.FitsRa = header.GetDoubleValue("CRVAL1", 0.0) / 15.0; // Convert to hours
+                    newheader.FitsRa = header.GetDoubleValue("CRVAL1", 0.0) / 15.0;
                 }
 
-                // Read the Dec from the header (CRVAL2)
                 if (header.ContainsKey("CRVAL2"))
                 {
                     newheader.FitsDec = header.GetDoubleValue("CRVAL2", 0.0);
                 }
 
-                // Exposure time (EXPTIME)
                 if (header.ContainsKey("EXPTIME"))
                 {
                     newheader.ExposureTime = header.GetDoubleValue("EXPTIME", 0.0);
                 }
 
-                // Date and Time of Observation (DATE-OBS)
                 if (header.ContainsKey("DATE-LOC"))
                 {
                     string dateLoc = header.GetStringValue("DATE-LOC");
                     if (DateTime.TryParse(dateLoc, out DateTime observationTime))
                     {
-                        //                        newheader.LocalTime = observationTime.ToLocalTime();
                         TimeZoneInfo localTimeZone = TimeZoneInfo.Local;
-
-                        // Convert UTC to local time zone.
                         DateTimeOffset localTime = TimeZoneInfo.ConvertTime(observationTime, localTimeZone);
-
                         newheader.LocalTime = localTime.DateTime;
                     }
                 }
-                // Date and Time of Observation (DATE-OBS)
+
                 if (header.ContainsKey("DATE-OBS"))
                 {
                     string dateObs = header.GetStringValue("DATE-OBS");
                     if (DateTime.TryParse(dateObs, out DateTime observationTime))
                     {
-                        newheader.DateObs = observationTime; // utcTime.DateTime;
+                        newheader.DateObs = observationTime;
                     }
                 }
 
                 if (header.ContainsKey("DATE-AVG"))
                 {
-                    string dateObs = header.GetStringValue("DATE-AVG");
-                    if (DateTime.TryParse(dateObs, out DateTime observationTime))
+                    string dateAvg = header.GetStringValue("DATE-AVG");
+                    if (DateTime.TryParse(dateAvg, out DateTime observationTime))
                     {
                         newheader.DateAvg = observationTime;
                     }
                 }
 
-                // Airmass (AIRMASS)
                 if (header.ContainsKey("AIRMASS"))
                 {
-                    newheader.Airmass = header.GetDoubleValue("AIRMASS", 1.0); // Default to 1.0 if not found
+                    newheader.Airmass = header.GetDoubleValue("AIRMASS", 1.0);
                 }
 
-                // Read filter information (FILTER)
                 if (header.ContainsKey("FILTER"))
                 {
-                    newheader.Filter = header.GetStringValue("FILTER");//, "Unknown");
+                    newheader.Filter = header.GetStringValue("FILTER");
                 }
                 if (header.ContainsKey("DEC"))
                 {
@@ -309,50 +302,53 @@ namespace ContraDrift
                     newheader.ObjectDec = ConvertDECtoDegrees(header.GetStringValue("OBJCTDEC"));
                 }
 
-
-                // Log the extracted header information
                 log.Info($"FITS Header Parsed: RA: {newheader.FitsRa}, DEC: {newheader.FitsDec}, ExposureTime: {newheader.ExposureTime}, Airmass: {newheader.Airmass}, Filter: {newheader.Filter}");
 
-                // Properly close and clean up resources
-                header = hdu.Header;
-
-                return (newheader); // (true, fitsRa, fitsDec, plateLocaltime, plateExposureTime, airmass, solvetime, fitsRa, fitsDec, filter);
+                return newheader;
             }
             catch (Exception ex)
             {
                 log.Error(ex, "Error processing FITS header");
-                return (newheader);
+                return newheader;
             }
-
-            return (newheader); // (solved, plateRa, plateDec, plateLocaltime, plateExposureTime, airmass, solvetime, fitsRa, fitsDec, filter);
+            finally
+            {
+                if (bf != null)
+                {
+                    try { bf.Close(); } catch (Exception ex) { log.Warn(ex, "Error closing FITS file"); }
+                }
+            }
         }
 
-        public async Task<SolveResults> PlateSolveAllAsync(string filename, CancellationToken cancellationToken)
-        //       static async Task PlateSolveAllAsync(string filename, CancellationToken cancellationToken)
+        public async Task<SolveResults> PlateSolveAllAsync(string filename, double lastPlateRa, double lastPlateDec, CancellationToken cancellationToken)
         {
             CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            // Define solve tasks for the current directory
             var solveTask1 = Task.Run(() => PlateSolveAstapAsync(filename, linkedCts.Token));
             var solveTask2 = Task.Run(() => PlateSolvePinPointWrapperpAsync(filename, linkedCts.Token));
-
-            // Check if the file exists in the parent directory and create 2 additional tasks if it does
-            var parentDirectory = Directory.GetParent(Directory.GetParent(Path.GetFullPath(filename)).ToString()).ToString();
-            var parentFilePath = Path.Combine(parentDirectory, Path.GetFileName(filename));
+            var solveTask5 = Task.Run(() => PlateSolvePinPointDirectAsync(filename, lastPlateRa, lastPlateDec, linkedCts.Token));
 
             Task<SolveResults> solveTask3 = null;
             Task<SolveResults> solveTask4 = null;
 
-            if (File.Exists(parentFilePath))
+            if (config.EnableParentDirSolve)
             {
-                log.Info($"File found in parent directory: {parentFilePath}");
-                WaitForFileAccess(parentFilePath);
-                solveTask3 = Task.Run(() => PlateSolveAstapAsync(parentFilePath, linkedCts.Token));
-                solveTask4 = Task.Run(() => PlateSolvePinPointWrapperpAsync(parentFilePath, linkedCts.Token));
+                var parentDir = Directory.GetParent(Directory.GetParent(Path.GetFullPath(filename))?.ToString() ?? "")?.ToString();
+                if (!string.IsNullOrEmpty(parentDir))
+                {
+                    var parentFilePath = Path.Combine(parentDir, Path.GetFileName(filename));
+                    if (File.Exists(parentFilePath))
+                    {
+                        log.Info($"File found in parent directory: {parentFilePath}");
+                        WaitForFileAccess(parentFilePath);
+                        solveTask3 = Task.Run(() => PlateSolveAstapAsync(parentFilePath, linkedCts.Token));
+                        solveTask4 = Task.Run(() => PlateSolvePinPointWrapperpAsync(parentFilePath, linkedCts.Token));
+                    }
+                }
             }
 
             // Await the first completed task
-            var tasks = new[] { solveTask1, solveTask2, solveTask3, solveTask4 }.Where(t => t != null).ToArray();
+            var tasks = new[] { solveTask1, solveTask2, solveTask3, solveTask4, solveTask5 }.Where(t => t != null).ToArray();
 
             var firstCompleted = await Task.WhenAny(tasks);
 
@@ -398,11 +394,11 @@ namespace ContraDrift
         {
             return await Task.Run(async () =>
             {
-                double plateRa = 0, plateDec = 0, fitsRa = 0, fitsDec = 0, plateExposureTime = 0, airmass = 0;
+                double plateRa = 0, plateDec = 0;
                 DateTime plateLocaltime = DateTime.Now;
                 bool solved = false;
                 Stopwatch stopwatch = new Stopwatch();
-                string vppwExePath = @"C:\VisualPinPointWrapper\VisualPinPointWrapper.exe"; // Update to the actual ASTAP CLI path on your system
+                string vppwExePath = config.VppwExePath;
                 string outputFilename = Path.Combine(Path.GetDirectoryName(inputFilename), Path.GetFileNameWithoutExtension(inputFilename) + ".vppwini");
 
                 try
@@ -493,8 +489,6 @@ namespace ContraDrift
                             // For demonstration purposes:
                             // You can integrate this part with the same FITS reading method as in PinPoint if needed
 
-                            fitsRa = plateRa;  // Example: using the same RA as result
-                            fitsDec = plateDec; // Example: using the same DEC as result
                             log.Info("VisualPinPointWrapper_solvetime=" + stopwatch.Elapsed);
 
                             log.Info($"VisualPinPointWrapper plate solve succeeded on {inputFilename}: RA: {plateRa}, DEC: {plateDec}");
@@ -525,11 +519,10 @@ namespace ContraDrift
         {
             return await Task.Run(async () =>
             {
-                double plateRa = 0, plateDec = 0, fitsRa = 0, fitsDec = 0;
-                DateTime plateLocaltime = DateTime.Now;
+                double plateRa = 0, plateDec = 0;
                 bool solved = false;
                 Stopwatch stopwatch = new Stopwatch();
-                string astapExePath = @"C:\Program Files\astap\astap_cli.exe"; // Update to the actual ASTAP CLI path on your system
+                string astapExePath = config.AstapExePath;
                 string outputFilename = Path.Combine(Path.GetDirectoryName(inputFilename), Path.GetFileNameWithoutExtension(inputFilename) + ".ini");
 
 
@@ -614,8 +607,6 @@ namespace ContraDrift
                             // For demonstration purposes:
                             // You can integrate this part with the same FITS reading method as in PinPoint if needed
 
-                            fitsRa = plateRa;  // Example: using the same RA as result
-                            fitsDec = plateDec; // Example: using the same DEC as result
                             log.Info("astap_solvetime=" + stopwatch.Elapsed);
 
                             log.Info($"ASTAP plate solve succeeded on {inputFilename}, RA: {plateRa}, DEC: {plateDec}");
@@ -636,7 +627,88 @@ namespace ContraDrift
                 }
 
                 return new SolveResults { Solved = solved, PlateRa = plateRa, PlateDec = plateDec, SolveTime = (float)stopwatch.ElapsedMilliseconds / 1000, Solver = "astap" };
-                //                return (solved, plateRa, plateDec,  (float)stopwatch.ElapsedMilliseconds / 1000, "astap");
+            }, cancellationToken);
+        }
+
+        public async Task<SolveResults> PlateSolvePinPointDirectAsync(
+            string inputFilename, double lastPlateRa, double lastPlateDec, CancellationToken cancellationToken)
+        {
+            return await Task.Run(() =>
+            {
+                if (Path.GetExtension(inputFilename) != ".fits")
+                {
+                    return new SolveResults { Solver = "PinPointDirect" };
+                }
+
+                if (string.IsNullOrWhiteSpace(config.Ucac4Path))
+                {
+                    log.Warn("UCAC4 path not configured; skipping PinPoint direct solve.");
+                    return new SolveResults { Solver = "PinPointDirect" };
+                }
+
+                var stopwatch = Stopwatch.StartNew();
+                Plate plate = null;
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    plate = new Plate();
+                    plate.AttachFITS(inputFilename);
+                    plate.ArcsecPerPixelHoriz = (Convert.ToDouble(plate.ReadFITSValue("XPIXSZ")) / Convert.ToDouble(plate.ReadFITSValue("FOCALLEN"))) * 206.2648062;
+                    plate.ArcsecPerPixelVert = (Convert.ToDouble(plate.ReadFITSValue("YPIXSZ")) / Convert.ToDouble(plate.ReadFITSValue("FOCALLEN"))) * 206.2648062;
+
+                    if (lastPlateRa == -1) { plate.RightAscension = plate.TargetRightAscension; } else { plate.RightAscension = lastPlateRa; }
+                    if (lastPlateDec == -1) { plate.Declination = plate.TargetDeclination; } else { plate.Declination = lastPlateDec; }
+
+                    plate.Catalog = (CatalogType)11;
+                    plate.CatalogPath = config.Ucac4Path;
+                    plate.CatalogExpansion = 0.4;
+                    plate.TraceLevel = 2;
+                    plate.TracePath = inputFilename + ".PlateSolveDebug";
+
+                    if (!Directory.Exists(plate.TracePath))
+                    {
+                        Directory.CreateDirectory(plate.TracePath);
+                    }
+
+                    plate.Solve();
+
+                    if (!plate.Solved)
+                    {
+                        log.Warn($"PinPoint direct solve failed on {inputFilename}");
+                        return new SolveResults { Solver = "PinPointDirect" };
+                    }
+
+                    log.Info($"PinPoint direct solve succeeded on {inputFilename}: RA: {plate.RightAscension}, DEC: {plate.Declination}");
+                    return new SolveResults
+                    {
+                        Solved = true,
+                        PlateRa = plate.RightAscension,
+                        PlateDec = plate.Declination,
+                        SolveTime = (float)stopwatch.ElapsedMilliseconds / 1000,
+                        Solver = "PinPointDirect",
+                        Filename = inputFilename
+                    };
+                }
+                catch (OperationCanceledException)
+                {
+                    log.Warn($"PinPoint direct solve canceled on {inputFilename}");
+                    return new SolveResults { Solver = "PinPointDirect" };
+                }
+                catch (Exception ex)
+                {
+                    log.Error(ex, $"Error during PinPoint direct plate solving on {inputFilename}");
+                    return new SolveResults { Solver = "PinPointDirect" };
+                }
+                finally
+                {
+                    if (plate != null)
+                    {
+                        try { plate.DetachFITS(); } catch { }
+                        Marshal.ReleaseComObject(plate);
+                    }
+                    stopwatch.Stop();
+                }
             }, cancellationToken);
         }
     }

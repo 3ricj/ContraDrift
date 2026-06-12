@@ -79,26 +79,34 @@ namespace ContraDrift
         // Method to update an existing record
         public bool UpdateRecord(DataRecord updatedRecord)
         {
-            var existingRecord = records.FirstOrDefault(r => r.Filename == updatedRecord.Filename);
-            if (existingRecord == null)
+            lock (recordLock)
             {
-                AddRecord(updatedRecord);
-                return true ;  // No record found to update
+                var existingRecord = records.FirstOrDefault(r => r.Filename == updatedRecord.Filename);
+                if (existingRecord == null)
+                {
+                    return AddRecord(updatedRecord);
+                }
+                int recordIndex = records.IndexOf(existingRecord);
+                records[recordIndex] = updatedRecord;
+                UpdateGridView(recordIndex, updatedRecord);
+                UpdateExcelRow(recordIndex, updatedRecord);
+                return true;
             }
-            int recordIndex = records.IndexOf(existingRecord);
-            records[recordIndex] = updatedRecord;
-            UpdateGridView(recordIndex, updatedRecord);
-            UpdateExcelRow(recordIndex, updatedRecord);
-            return true;
         }
             
         public List<DataRecord> GetRecords()
         {
-            return records;
+            lock (recordLock)
+            {
+                return new List<DataRecord>(records);
+            }
         }
         public int Count()
         {
-            return records.Count;
+            lock (recordLock)
+            {
+                return records.Count;
+            }
         }
 
         // Move SetupDataGridView into DataManager
@@ -343,21 +351,32 @@ namespace ContraDrift
 
         public void SaveToCSV(string filePath)
         {
+            List<DataRecord> snapshot;
+            lock (recordLock)
+            {
+                snapshot = new List<DataRecord>(records);
+            }
+
             using (StreamWriter writer = new StreamWriter(filePath))
             {
-                // Use reflection to get the property names of DataRecord for the header
                 var properties = typeof(DataRecord).GetProperties();
+                writer.WriteLine(string.Join(",", properties.Select(prop => EscapeCsv(prop.Name))));
 
-                // Write the headers dynamically
-                writer.WriteLine(string.Join(",", properties.Select(prop => prop.Name)));
-
-                // Write the values for each record dynamically
-                foreach (var record in records)
+                foreach (var record in snapshot)
                 {
-                    var values = properties.Select(prop => prop.GetValue(record, null)?.ToString() ?? "");
+                    var values = properties.Select(prop => EscapeCsv(prop.GetValue(record, null)?.ToString() ?? ""));
                     writer.WriteLine(string.Join(",", values));
                 }
             }
+        }
+
+        private static string EscapeCsv(string value)
+        {
+            if (value.Contains(",") || value.Contains("\"") || value.Contains("\n") || value.Contains("\r"))
+            {
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            }
+            return value;
         }
 
         // Save to Excel using DataRecord

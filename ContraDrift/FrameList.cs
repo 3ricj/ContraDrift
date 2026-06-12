@@ -69,14 +69,17 @@ namespace ContraDrift
         public (double, double) GetPlateCollectionAverage()
         {
             DiscardOldest();
+            if (framelist.Count == 0)
+            {
+                log.Warn("GetPlateCollectionAverage called on empty frame list");
+                return (0, 0);
+            }
             double CollectionRaSumRecentWindow = 0;
             double CollectionDecSumRecentWindow = 0;
-            int WindowIndex = 0;
             foreach (framedata data in framelist)
             {
                 CollectionRaSumRecentWindow += data.PositionRaArcSec;
                 CollectionDecSumRecentWindow += data.PositionDecArcSec;
-                WindowIndex++;
             }
             return (
                 CollectionRaSumRecentWindow / framelist.Count,

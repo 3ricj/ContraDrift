@@ -286,5 +286,41 @@ namespace ContraDrift.Properties {
                 this["BufferFitsCount"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\Program Files\\astap\\astap_cli.exe")]
+        public string AstapExePath {
+            get {
+                return ((string)(this["AstapExePath"]));
+            }
+            set {
+                this["AstapExePath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("C:\\VisualPinPointWrapper\\VisualPinPointWrapper.exe")]
+        public string VppwExePath {
+            get {
+                return ((string)(this["VppwExePath"]));
+            }
+            set {
+                this["VppwExePath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool EnableParentDirSolve {
+            get {
+                return ((bool)(this["EnableParentDirSolve"]));
+            }
+            set {
+                this["EnableParentDirSolve"] = value;
+            }
+        }
     }
 }

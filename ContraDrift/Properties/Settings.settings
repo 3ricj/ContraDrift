@@ -68,5 +68,14 @@
     <Setting Name="BufferFitsCount" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
+    <Setting Name="AstapExePath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C:\Program Files\astap\astap_cli.exe</Value>
+    </Setting>
+    <Setting Name="VppwExePath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C:\VisualPinPointWrapper\VisualPinPointWrapper.exe</Value>
+    </Setting>
+    <Setting Name="EnableParentDirSolve" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
